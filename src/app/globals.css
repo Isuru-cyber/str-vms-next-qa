@@ -1,0 +1,245 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root, [data-theme="material"] {
+    --background: 215 28% 95%; /* #EEF2F7 */
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 243 75% 59%; /* #4F46E5 Indigo */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 243 75% 59%;
+    --radius: 0.5rem;
+
+    --sidebar-bg: #1E1B4B; /* Deep Navy Indigo */
+    --sidebar-fg: #F8FAFC;
+    --sidebar-border: #2E2866;
+    --sidebar-active: #4F46E5;
+  }
+
+  [data-theme="light"] {
+    --background: 210 20% 98%;
+    --foreground: 220 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
+    --primary: 217 91% 40%; /* Blue */
+    --primary-foreground: 0 0% 100%;
+    --sidebar-bg: #0F2747;
+    --sidebar-fg: #FFFFFF;
+    --sidebar-border: #1E3A5F;
+    --sidebar-active: #2563EB;
+  }
+
+  [data-theme="dark"], .dark {
+    --background: 222 47% 8%; /* #0B0F19 */
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%; /* #111827 */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --border: 217 33% 18%; /* #1E293B */
+    --input: 217 33% 18%;
+    --primary: 239 84% 67%; /* #6366F1 Indigo */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 239 84% 67%;
+
+    --sidebar-bg: #0B0F19;
+    --sidebar-fg: #F8FAFC;
+    --sidebar-border: #1E293B;
+    --sidebar-active: #4F46E5;
+  }
+}
+
+/* =========================================================
+   DARK THEME COMPREHENSIVE OVERRIDES FOR UTILITY CLASSES
+   ========================================================= */
+[data-theme="dark"] .bg-white,
+.dark .bg-white {
+  background-color: #111827 !important;
+}
+
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-slate-50,
+[data-theme="dark"] .bg-slate-50\/80,
+[data-theme="dark"] .bg-slate-50\/50,
+[data-theme="dark"] .bg-gray-50\/60,
+[data-theme="dark"] .bg-gray-50\/80,
+.dark .bg-gray-50,
+.dark .bg-slate-50,
+.dark .bg-slate-50\/80,
+.dark .bg-slate-50\/50,
+.dark .bg-gray-50\/60,
+.dark .bg-gray-50\/80 {
+  background-color: #0E1526 !important;
+}
+
+[data-theme="dark"] .bg-gray-100,
+[data-theme="dark"] .bg-slate-100,
+[data-theme="dark"] .bg-slate-200,
+.dark .bg-gray-100,
+.dark .bg-slate-100,
+.dark .bg-slate-200 {
+  background-color: #1E293B !important;
+}
+
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-slate-200,
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-slate-100,
+[data-theme="dark"] .border-slate-300,
+[data-theme="dark"] .border-gray-300,
+[data-theme="dark"] .border-slate-200\/80,
+.dark .border-gray-200,
+.dark .border-slate-200,
+.dark .border-gray-100,
+.dark .border-slate-100,
+.dark .border-slate-300,
+.dark .border-gray-300,
+.dark .border-slate-200\/80 {
+  border-color: #1E293B !important;
+}
+
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-slate-900,
+.dark .text-gray-900,
+.dark .text-slate-900 {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-slate-800,
+.dark .text-gray-800,
+.dark .text-slate-800 {
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-slate-700,
+.dark .text-gray-700,
+.dark .text-slate-700 {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-slate-600,
+.dark .text-gray-600,
+.dark .text-slate-600 {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-slate-500,
+.dark .text-gray-500,
+.dark .text-slate-500 {
+  color: #64748B !important;
+}
+
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #1E293B !important;
+  color: #F8FAFC !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] thead.bg-gray-50,
+[data-theme="dark"] thead.bg-slate-50,
+[data-theme="dark"] thead.bg-slate-200,
+.dark thead.bg-gray-50,
+.dark thead.bg-slate-50,
+.dark thead.bg-slate-200 {
+  background-color: #0E1526 !important;
+  border-color: #1E293B !important;
+}
+
+[data-theme="dark"] thead th,
+.dark thead th {
+  color: #94A3B8 !important;
+  border-color: #1E293B !important;
+}
+
+[data-theme="dark"] tfoot,
+.dark tfoot {
+  background-color: #0E1526 !important;
+  border-color: #1E293B !important;
+}
+
+[data-theme="dark"] tr.hover\:bg-gray-50\/50:hover,
+[data-theme="dark"] tr.hover\:bg-slate-50\/80:hover,
+[data-theme="dark"] tr.hover\:bg-gray-50:hover,
+[data-theme="dark"] tr.hover\:bg-slate-50:hover,
+.dark tr.hover\:bg-gray-50\/50:hover,
+.dark tr.hover\:bg-slate-50\/80:hover,
+.dark tr.hover\:bg-gray-50:hover,
+.dark tr.hover\:bg-slate-50:hover {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+[data-theme="dark"] header.bg-white,
+.dark header.bg-white {
+  background-color: #0B0F19 !important;
+  border-color: #1E293B !important;
+}
+
+html {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* Custom & Hidden Scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Global sleek scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}

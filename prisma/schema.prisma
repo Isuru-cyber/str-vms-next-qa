@@ -1,0 +1,550 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  name        String  @db.VarChar(50)
+  code        String  @unique @db.VarChar(20)
+  description String? @db.Text
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id                 Int      @id @default(autoincrement())
+  userCode           String?  @unique @map("user_code") @db.VarChar(50)
+  name               String   @db.VarChar(100)
+  email              String   @unique @db.VarChar(100)
+  password           String   @db.VarChar(255)
+  roleId             Int      @map("role_id")
+  themePreference    String   @default("material") @map("theme_preference") @db.VarChar(30)
+  sidebarHiddenItems String?  @map("sidebar_hidden_items") @db.Text
+  active             Int      @default(1) @db.SmallInt
+  mustChangePassword Int      @default(0) @map("must_change_password") @db.SmallInt
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  role            Role                @relation(fields: [roleId], references: [id])
+  plants          UserPlant[]
+  subOperations   UserSubOperation[]
+  operations      UserOperation[]
+  permissions     UserPermission[]
+  vehicleRequests VehicleRequest[]
+  completedTrips  DeliveryTrip[]      @relation("TripCompletedBy")
+  gatePasses      TripGatePass[]
+  activityLogs    ActivityLog[]
+  auditLogs       AuditLog[]
+
+  @@index([roleId], map: "idx_u_role_id")
+  @@index([email], map: "idx_u_email")
+  @@index([active], map: "idx_u_active")
+  @@map("users")
+}
+
+model UserPlant {
+  userId  Int @map("user_id")
+  plantId Int @map("plant_id")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, plantId])
+  @@index([plantId], map: "idx_up_plant_id")
+  @@map("user_plants")
+}
+
+model UserSubOperation {
+  userId         Int @map("user_id")
+  subOperationId Int @map("sub_operation_id")
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subOperation MasterData @relation(fields: [subOperationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, subOperationId])
+  @@index([subOperationId], map: "idx_uso_sub_operation_id")
+  @@map("user_sub_operations")
+}
+
+model UserOperation {
+  userId      Int @map("user_id")
+  operationId Int @map("operation_id")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operation Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, operationId])
+  @@index([operationId], map: "idx_uo_operation_id")
+  @@map("user_operations")
+}
+
+model UserPermission {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  permissionKey String   @map("permission_key") @db.VarChar(64)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionKey], map: "uq_user_perm")
+  @@index([userId, permissionKey], map: "idx_uperm_user_key")
+  @@map("user_permissions")
+}
+
+model Plant {
+  id            Int     @id @default(autoincrement())
+  code          String  @unique @db.VarChar(20)
+  name          String  @db.VarChar(100)
+  businessGroup String? @default("ELASTIC") @map("business_group") @db.VarChar(50)
+  sortOrder     Int?    @default(0) @map("sort_order")
+  active        Int     @default(1) @db.SmallInt
+
+  userPlants      UserPlant[]
+  drivers         Driver[]
+  locations       Location[]
+  vehicleRequests VehicleRequest[]
+
+  @@map("plants")
+}
+
+model Operation {
+  id   Int    @id @default(autoincrement())
+  code String @unique @db.VarChar(20)
+  name String @db.VarChar(100)
+
+  userOperations  UserOperation[]
+  vehicles        Vehicle[]
+  vehicleRequests VehicleRequest[]
+
+  @@map("operations")
+}
+
+model MasterCategory {
+  id   Int    @id @default(autoincrement())
+  code String @unique @db.VarChar(50)
+  name String @db.VarChar(100)
+
+  masterData MasterData[]
+
+  @@map("master_categories")
+}
+
+model MasterData {
+  id                       Int      @id @default(autoincrement())
+  categoryId               Int      @map("category_id")
+  code                     String   @db.VarChar(50)
+  name                     String   @db.VarChar(100)
+  defaultFuelConsumption   Decimal? @map("default_fuel_consumption") @db.Decimal(6, 2)
+  defaultRunningCostPerKm  Decimal? @map("default_running_cost_per_km") @db.Decimal(8, 2)
+  defaultProfitPerKm       Decimal? @default(15.00) @map("default_profit_per_km") @db.Decimal(10, 2)
+  defaultFixedCostPerDay   Decimal? @default(1795.36) @map("default_fixed_cost_per_day") @db.Decimal(10, 2)
+  sortOrder                Int?     @default(0) @map("sort_order")
+  active                   Int      @default(1) @db.SmallInt
+
+  category           MasterCategory     @relation(fields: [categoryId], references: [id])
+  userSubOperations  UserSubOperation[]
+  subOpRequests      VehicleRequest[]   @relation("RequestSubOp")
+  vehTypeRequests    VehicleRequest[]   @relation("RequestVehType")
+
+  @@unique([categoryId, code])
+  @@map("master_data")
+}
+
+model Location {
+  id            Int      @id @default(autoincrement())
+  locationName  String   @map("location_name") @db.VarChar(100)
+  businessGroup String?  @default("ELASTIC") @map("business_group") @db.VarChar(20)
+  code          String?  @db.VarChar(50)
+  locationType  String   @map("location_type") @db.VarChar(20)
+  plantId       Int?     @map("plant_id")
+  customerId    Int?     @map("customer_id")
+  latitude      Decimal? @db.Decimal(10, 8)
+  longitude     Decimal? @db.Decimal(11, 8)
+  active        Int      @default(1) @db.SmallInt
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  isOrigin      Int      @default(0) @map("is_origin") @db.SmallInt
+
+  plant               Plant?           @relation(fields: [plantId], references: [id])
+  vehicles            Vehicle[]        @relation("VehicleDefaultLocation")
+  routesOrigin        Route[]          @relation("RouteOriginLocation")
+  routeStops          RouteStop[]
+  requestsFromLocation VehicleRequest[] @relation("RequestFromLocation")
+  requestsToLocation   VehicleRequest[] @relation("RequestToLocation")
+
+  @@index([active], map: "idx_loc_active")
+  @@index([plantId], map: "idx_loc_plant_id")
+  @@index([isOrigin], map: "idx_loc_origin")
+  @@map("locations")
+}
+
+model Vehicle {
+  id                  Int       @id @default(autoincrement())
+  vehicleNumber       String    @unique @map("vehicle_number") @db.VarChar(20)
+  vehicleType         String    @map("vehicle_type") @db.VarChar(50)
+  operationCategoryId Int?      @map("operation_category_id")
+  maxPayloadKg        Decimal?  @map("max_payload_kg") @db.Decimal(10, 2)
+  maxVolumeCbm        Decimal?  @map("max_volume_cbm") @db.Decimal(10, 2)
+  defaultLocationId   Int?      @map("default_location_id")
+  paymentBasis        String    @default("KM_BASED") @map("payment_basis") @db.VarChar(20)
+  monthlyKmLimit      Int?      @map("monthly_km_limit")
+  status              String    @default("AVAILABLE") @db.VarChar(20)
+  activeFrom          DateTime? @map("active_from") @db.Date
+  remarks             String?   @db.Text
+  active              Int       @default(1) @db.SmallInt
+  fuelConsumptionKml  Decimal?  @default(10.00) @map("fuel_consumption_kml") @db.Decimal(6, 2)
+  runningCostPerKm    Decimal?  @default(20.50) @map("running_cost_per_km") @db.Decimal(8, 2)
+  profitPerKm         Decimal?  @default(15.00) @map("profit_per_km") @db.Decimal(8, 2)
+  fixedCostPerDay     Decimal?  @default(1795.36) @map("fixed_cost_per_day") @db.Decimal(10, 2)
+  monthlyFixedRate    Decimal?  @default(0.00) @map("monthly_fixed_rate") @db.Decimal(12, 2)
+  extraKmRate         Decimal?  @default(0.00) @map("extra_km_rate") @db.Decimal(8, 2)
+
+  operationCategory Operation?     @relation(fields: [operationCategoryId], references: [id])
+  defaultLocation   Location?      @relation("VehicleDefaultLocation", fields: [defaultLocationId], references: [id])
+  drivers           Driver[]       @relation("DriverLinkedVehicle")
+  deliveryTrips     DeliveryTrip[]
+
+  @@index([status], map: "idx_v_status")
+  @@index([active], map: "idx_v_active")
+  @@map("vehicles")
+}
+
+model Driver {
+  id              Int       @id @default(autoincrement())
+  name            String    @db.VarChar(100)
+  nic             String    @unique @db.VarChar(20)
+  mobile          String    @db.VarChar(20)
+  licenseNumber   String    @map("license_number") @db.VarChar(50)
+  licenseExpiry   DateTime? @map("license_expiry") @db.Date
+  linkedVehicleId Int?      @map("linked_vehicle_id")
+  linkedPlantId   Int?      @map("linked_plant_id")
+  status          String    @default("AVAILABLE") @db.VarChar(20)
+  remarks         String?   @db.Text
+  active          Int       @default(1) @db.SmallInt
+
+  linkedVehicle Vehicle?       @relation("DriverLinkedVehicle", fields: [linkedVehicleId], references: [id])
+  linkedPlant   Plant?         @relation(fields: [linkedPlantId], references: [id])
+  deliveryTrips DeliveryTrip[]
+
+  @@index([status], map: "idx_d_status")
+  @@index([active], map: "idx_d_active")
+  @@map("drivers")
+}
+
+model Route {
+  id               Int      @id @default(autoincrement())
+  routeCode        String   @unique @map("route_code") @db.VarChar(50)
+  routeName        String   @map("route_name") @db.VarChar(300)
+  businessGroup    String?  @default("ELASTIC") @map("business_group") @db.VarChar(20)
+  operationType    String?  @map("operation_type") @db.VarChar(50)
+  originLocationId Int      @map("origin_location_id")
+  totalDistanceKm  Decimal? @map("total_distance_km") @db.Decimal(10, 2)
+  routeGroup       String?  @map("route_group") @db.VarChar(50)
+  active           Int      @default(1) @db.SmallInt
+  remarks          String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+
+  originLocation  Location         @relation("RouteOriginLocation", fields: [originLocationId], references: [id])
+  stops           RouteStop[]
+  deliveryTrips   DeliveryTrip[]
+  vehicleRequests VehicleRequest[]
+
+  @@index([originLocationId], map: "idx_r_origin")
+  @@map("routes")
+}
+
+model RouteStop {
+  id                   Int      @id @default(autoincrement())
+  routeId              Int      @map("route_id")
+  locationId           Int      @map("location_id")
+  stopSequence         Int      @map("stop_sequence")
+  legDistanceKm        Decimal? @default(0.00) @map("leg_distance_km") @db.Decimal(8, 2)
+  cumulativeDistanceKm Decimal? @default(0.00) @map("cumulative_distance_km") @db.Decimal(8, 2)
+  estimatedTime        Int?     @map("estimated_time")
+  active               Int      @default(1) @db.SmallInt
+
+  route    Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@index([routeId])
+  @@index([locationId])
+  @@map("route_stops")
+}
+
+model VehicleRequest {
+  id                Int      @id @default(autoincrement())
+  requestCode       String   @unique @map("request_code") @db.VarChar(20)
+  requesterId       Int      @map("requester_id")
+  plantId           Int      @map("plant_id")
+  operationId       Int      @map("operation_id")
+  subOperationId    Int?     @map("sub_operation_id")
+  requestType       String?  @map("request_type") @db.VarChar(50)
+  fromLocationId    Int      @map("from_location_id")
+  toLocationId      Int      @map("to_location_id")
+  routeId           Int?     @map("route_id")
+  plannedDistanceKm Decimal? @map("planned_distance_km") @db.Decimal(8, 2)
+  contactPerson     String?  @map("contact_person") @db.VarChar(100)
+  contactPhone      String?  @map("contact_phone") @db.VarChar(50)
+  itemDescription   String   @map("item_description") @db.Text
+  quantity          Decimal? @db.Decimal(10, 2)
+  unit              String?  @db.VarChar(20)
+  boxCount          Int?     @map("box_count")
+  requiredKg        Decimal? @map("required_kg") @db.Decimal(10, 2)
+  requiredCbm       Decimal? @map("required_cbm") @db.Decimal(10, 2)
+  vehicleTypeId     Int?     @map("vehicle_type_id")
+  requiredDate      DateTime @map("required_date") @db.Date
+  requiredTime      String   @map("required_time") @db.VarChar(20)
+  goodsReadyStatus  String?  @map("goods_ready_status") @db.VarChar(50)
+  urgency           String?  @default("Normal") @db.VarChar(20)
+  remarks           String?  @db.Text
+  invoiceNumbers    String?  @map("invoice_numbers") @db.Text
+  status            String   @default("SUBMITTED") @db.VarChar(50)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+  requester    User            @relation(fields: [requesterId], references: [id])
+  plant        Plant           @relation(fields: [plantId], references: [id])
+  operation    Operation       @relation(fields: [operationId], references: [id])
+  subOperation MasterData?     @relation("RequestSubOp", fields: [subOperationId], references: [id])
+  vehicleType  MasterData?     @relation("RequestVehType", fields: [vehicleTypeId], references: [id])
+  fromLocation Location        @relation("RequestFromLocation", fields: [fromLocationId], references: [id])
+  toLocation   Location        @relation("RequestToLocation", fields: [toLocationId], references: [id])
+  route        Route?          @relation(fields: [routeId], references: [id])
+  tripRequests TripRequest[]
+  gatePasses   TripGatePass[]
+  pods         InvoicePod[]
+
+  @@index([status], map: "idx_vr_status")
+  @@index([plantId], map: "idx_vr_plant_id")
+  @@index([operationId], map: "idx_vr_operation_id")
+  @@index([subOperationId], map: "idx_vr_sub_operation_id")
+  @@index([requesterId], map: "idx_vr_requester_id")
+  @@index([requiredDate], map: "idx_vr_required_date")
+  @@index([createdAt], map: "idx_vr_created_at")
+  @@map("vehicle_requests")
+}
+
+model DeliveryTrip {
+  id                Int       @id @default(autoincrement())
+  tripNo            String    @unique @map("trip_no") @db.VarChar(20)
+  vehicleId         Int       @map("vehicle_id")
+  driverId          Int       @map("driver_id")
+  routeId           Int?      @map("route_id")
+  plannedKm         Decimal?  @default(0.00) @map("planned_km") @db.Decimal(8, 2)
+  actualKm          Decimal?  @map("actual_km") @db.Decimal(8, 2)
+  paymentBasis      String?   @map("payment_basis") @db.VarChar(50)
+  standardCost      Decimal?  @map("standard_cost") @db.Decimal(10, 2)
+  estimatedCost     Decimal?  @map("estimated_cost") @db.Decimal(10, 2)
+  actualCost        Decimal?  @map("actual_cost") @db.Decimal(10, 2)
+  plannedStart      DateTime? @map("planned_start")
+  actualStart       DateTime? @map("actual_start")
+  plannedEnd        DateTime? @map("planned_end")
+  actualEnd         DateTime? @map("actual_end")
+  status            String    @default("ASSIGNED") @db.VarChar(50)
+  adminRemarks      String?   @map("admin_remarks") @db.Text
+  completedBy       Int?      @map("completed_by")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+  dieselRateApplied Decimal?  @map("diesel_rate_applied") @db.Decimal(10, 2)
+  fuelCost          Decimal?  @map("fuel_cost") @db.Decimal(12, 2)
+  runningCost       Decimal?  @map("running_cost") @db.Decimal(12, 2)
+  driverProfit      Decimal?  @map("driver_profit") @db.Decimal(12, 2)
+  fixedDailyCost    Decimal?  @map("fixed_daily_cost") @db.Decimal(12, 2)
+  totalTripCost     Decimal?  @map("total_trip_cost") @db.Decimal(12, 2)
+
+  vehicle         Vehicle               @relation(fields: [vehicleId], references: [id])
+  driver          Driver                @relation(fields: [driverId], references: [id])
+  route           Route?                @relation(fields: [routeId], references: [id])
+  completedByUser User?                 @relation("TripCompletedBy", fields: [completedBy], references: [id])
+  tripRequests    TripRequest[]
+  gatePasses      TripGatePass[]
+  reconciliations TripReconciliation[]
+  pods            InvoicePod[]
+
+  @@index([status], map: "idx_dt_status")
+  @@index([tripNo], map: "idx_dt_trip_no")
+  @@index([vehicleId], map: "idx_dt_vehicle_id")
+  @@index([driverId], map: "idx_dt_driver_id")
+  @@index([createdAt], map: "idx_dt_created_at")
+  @@map("delivery_trips")
+}
+
+model TripRequest {
+  tripId          Int  @map("trip_id")
+  requestId       Int  @map("request_id")
+  loadingSequence Int? @default(1) @map("loading_sequence")
+
+  trip    DeliveryTrip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  request VehicleRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, requestId])
+  @@index([tripId], map: "idx_tr_trip_id")
+  @@index([requestId], map: "idx_tr_request_id")
+  @@map("trip_requests")
+}
+
+model TripGatePass {
+  id         Int       @id @default(autoincrement())
+  tripId     Int       @map("trip_id")
+  requestId  Int?      @map("request_id")
+  gatePassNo String    @map("gate_pass_no") @db.VarChar(100)
+  remarks    String?   @db.Text
+  enteredBy  Int?      @map("entered_by")
+  createdAt  DateTime? @default(now()) @map("created_at")
+  status     String?   @default("ENTERED") @db.VarChar(20)
+
+  trip        DeliveryTrip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  request     VehicleRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  enteredUser User?           @relation(fields: [enteredBy], references: [id], onDelete: SetNull)
+
+  @@index([tripId])
+  @@index([gatePassNo])
+  @@map("trip_gate_passes")
+}
+
+model TripReconciliation {
+  id              Int       @id @default(autoincrement())
+  tripId          Int       @map("trip_id")
+  gatePassNo      String    @map("gate_pass_no") @db.VarChar(100)
+  actualVehicleNo String?   @map("actual_vehicle_no") @db.VarChar(50)
+  actualBoxes     Int?      @default(0) @map("actual_boxes")
+  actualKg        Decimal?  @default(0.000) @map("actual_kg") @db.Decimal(10, 3)
+  actualCbm       Decimal?  @default(0.0000) @map("actual_cbm") @db.Decimal(10, 4)
+  invoiceNumbers  String?   @map("invoice_numbers") @db.Text
+  customerName    String?   @map("customer_name") @db.VarChar(255)
+  deliveryAddress String?   @map("delivery_address") @db.Text
+  dispatchedDate  String?   @map("dispatched_date") @db.VarChar(50)
+  matchStatus     String?   @default("MATCHED") @map("match_status") @db.VarChar(30)
+  varianceRemarks String?   @map("variance_remarks") @db.Text
+  reconciledBy    Int?      @map("reconciled_by")
+  reconciledAt    DateTime? @default(now()) @map("reconciled_at")
+
+  trip DeliveryTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([gatePassNo])
+  @@map("trip_reconciliations")
+}
+
+model InvoicePod {
+  id             Int       @id @default(autoincrement())
+  tripId         Int       @map("trip_id")
+  requestId      Int?      @map("request_id")
+  invoiceNumber  String    @map("invoice_number") @db.VarChar(100)
+  vehicleNumber  String?   @map("vehicle_number") @db.VarChar(50)
+  driverName     String?   @map("driver_name") @db.VarChar(100)
+  driverMobile   String?   @map("driver_mobile") @db.VarChar(50)
+  locationName   String?   @map("location_name") @db.VarChar(150)
+  isReceived     Boolean   @default(false) @map("is_received")
+  receivedAt     DateTime? @map("received_at")
+  receivedBy     Int?      @map("received_by")
+  receivedByName String?   @map("received_by_name") @db.VarChar(100)
+  remarks        String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  trip    DeliveryTrip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  request VehicleRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@unique([tripId, invoiceNumber])
+  @@index([tripId])
+  @@index([invoiceNumber])
+  @@index([isReceived])
+  @@map("invoice_pods")
+}
+
+model MonthlyFuelRate {
+  id          Int      @id @default(autoincrement())
+  periodMonth String   @unique @map("period_month") @db.VarChar(7)
+  dieselRate  Decimal  @map("diesel_rate") @db.Decimal(10, 2)
+  isLocked    Int      @default(0) @map("is_locked") @db.SmallInt
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("monthly_fuel_rates")
+}
+
+model SystemSetting {
+  id           Int     @id @default(autoincrement())
+  settingKey   String  @unique @map("setting_key") @db.VarChar(50)
+  settingValue String? @map("setting_value") @db.Text
+
+  @@map("system_settings")
+}
+
+model MailTemplate {
+  id          Int      @id @default(autoincrement())
+  templateKey String   @unique @map("template_key") @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  subject     String   @db.VarChar(255)
+  body        String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("mail_templates")
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  roleTarget String?  @map("role_target") @db.VarChar(50)
+  plantId    Int?     @map("plant_id")
+  type       String   @db.VarChar(50)
+  title      String   @db.VarChar(255)
+  message    String   @db.Text
+  linkUrl    String?  @map("link_url") @db.VarChar(255)
+  isRead     Int      @default(0) @map("is_read") @db.SmallInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead], map: "idx_notif_user_read")
+  @@index([roleTarget, isRead], map: "idx_notif_role_read")
+  @@index([createdAt], map: "idx_notif_created_at")
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  action    String   @db.VarChar(100)
+  module    String?  @default("SYSTEM") @db.VarChar(50)
+  recordId  String?  @map("record_id") @db.VarChar(50)
+  details   String?  @db.Text
+  ipAddress String?  @default("127.0.0.1") @map("ip_address") @db.VarChar(45)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "idx_act_user_id")
+  @@index([module], map: "idx_act_module")
+  @@index([action], map: "idx_act_action")
+  @@index([createdAt], map: "idx_act_created_at")
+  @@map("activity_logs")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String   @db.VarChar(50)
+  module    String   @db.VarChar(50)
+  recordId  Int?     @map("record_id")
+  oldValue  String?  @map("old_value") @db.Text
+  newValue  String?  @map("new_value") @db.Text
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("audit_logs")
+}
