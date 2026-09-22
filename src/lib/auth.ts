@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { getRoleDefaultPermissions } from "./permission-utils";
 
 function getJwtSecretKey(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -20,10 +21,6 @@ function getJwtSecretKey(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-const key = getJwtSecretKey();
-
-import { getRoleDefaultPermissions } from "./permission-utils";
-
 export interface SessionUser {
   id: number;
   userCode: string | null;
@@ -40,16 +37,18 @@ export interface SessionUser {
 }
 
 export async function createSessionToken(payload: SessionUser): Promise<string> {
+  const secretKey = getJwtSecretKey();
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("24h")
-    .sign(key);
+    .sign(secretKey);
 }
 
 export async function verifySessionToken(token: string): Promise<SessionUser | null> {
   try {
-    const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
+    const secretKey = getJwtSecretKey();
+    const { payload } = await jwtVerify(token, secretKey, { algorithms: ["HS256"] });
     return payload as unknown as SessionUser;
   } catch {
     return null;

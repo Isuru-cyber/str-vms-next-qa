@@ -18,6 +18,7 @@ import {
   Building2,
   FileText,
   AlertCircle,
+  AlertTriangle,
   Clock,
   Check,
   Plus,
@@ -102,6 +103,22 @@ export function CombineWorkbenchClient({
   );
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // In-app Toast & Confirmation Modal
+  const [toast, setToast] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
+  const showToast = (type: "success" | "error" | "warning", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Modals state
   const [detailsModalReq, setDetailsModalReq] = useState<any | null>(null);
@@ -496,18 +513,18 @@ export function CombineWorkbenchClient({
         }),
       });
       if (res.ok) {
-        setIncludedRequests(includedRequests.filter((r) => r.id !== transferModalReq.id));
+        setIncludedRequests((prev) => prev.filter((r) => r.id !== transferModalReq.id));
         setTransferModalReq(null);
         setTargetTripId("");
-        showNotification();
+        showToast("success", "Request transferred successfully!");
         router.refresh();
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.message || "Failed to transfer request.");
+        showToast("error", errData.message || "Failed to transfer request.");
       }
     } catch (e) {
       console.error(e);
-      alert("An unexpected error occurred during transfer.");
+      showToast("error", "An unexpected error occurred during transfer.");
     } finally {
       setIsTransferring(false);
     }
@@ -532,12 +549,12 @@ export function CombineWorkbenchClient({
   // Save Allocation Handler (Single Batch Commit)
   const handleSaveAllocation = async () => {
     if (includedRequests.length === 0) {
-      alert("Please load at least one cargo request before saving allocation.");
+      showToast("warning", "Please load at least one cargo request before saving allocation.");
       return;
     }
 
     if (!selectedRouteId) {
-      alert("Please select a corridor route before saving the allocation.");
+      showToast("warning", "Please select a corridor route before saving the allocation.");
       return;
     }
 
@@ -558,13 +575,13 @@ export function CombineWorkbenchClient({
       const data = await res.json();
       if (res.ok && data.success) {
         setHasUnsavedChanges(false);
-        showNotification();
+        showToast("success", "Allocation saved successfully!");
         router.refresh();
       } else {
-        alert(data.message || "Failed to save allocation.");
+        showToast("error", data.message || "Failed to save allocation.");
       }
     } catch (err: any) {
-      alert(err.message || "Network error while saving allocation.");
+      showToast("error", err.message || "Network error while saving allocation.");
     } finally {
       setSaving(false);
     }
@@ -573,93 +590,100 @@ export function CombineWorkbenchClient({
   // Dispatch to Factory Loading Deck
   const handleDispatchDeck = async () => {
     if (hasUnsavedChanges) {
-      alert("⚠️ You have unsaved modifications in this combine allocation. Please click 'Save Allocation' before dispatching to the Loading Deck.");
+      showToast("warning", "You have unsaved modifications. Please click 'Save Allocation' before dispatching to the Loading Deck.");
       return;
     }
     if (!trip?.vehicleId && !trip?.vehicle) {
-      alert("Cannot dispatch: No vehicle has been assigned to this trip. Please assign a vehicle first.");
+      showToast("warning", "Cannot dispatch: No vehicle has been assigned to this trip.");
       return;
     }
     if (!trip?.driverId && !trip?.driver) {
-      alert("Cannot dispatch: No driver has been assigned to this trip. Please assign a driver first.");
+      showToast("warning", "Cannot dispatch: No driver has been assigned to this trip.");
       return;
     }
     if (includedRequests.length === 0) {
-      alert("Cannot dispatch: The trip has no cargo/requests included.");
+      showToast("warning", "Cannot dispatch: The trip has no cargo/requests included.");
       return;
     }
 
-    if (
-      !confirm(
-        "Dispatch this vehicle allocation to the Factory Loading Deck for physical loading & Gate Pass?"
-      )
-    )
-      return;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/allocations/combine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "dispatch-to-deck", tripId: trip.id }),
-      });
-      if (res.ok) {
-        setTrip((prev: any) => ({ ...prev, status: "DISPATCHED" }));
-        router.push("/reconciliation");
-        router.refresh();
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        alert(errData.message || "Failed to dispatch trip to loading deck.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("An error occurred while dispatching to loading deck.");
-    } finally {
-      setSaving(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Dispatch to Factory Loading Deck",
+      message: "Dispatch this vehicle allocation to the Factory Loading Deck for physical loading & Gate Pass?",
+      confirmText: "Yes, Dispatch",
+      isDestructive: false,
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          const res = await fetch("/api/allocations/combine", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "dispatch-to-deck", tripId: trip.id }),
+          });
+          if (res.ok) {
+            setTrip((prev: any) => ({ ...prev, status: "READY_FOR_LOADING" }));
+            router.push("/dispatch/deck");
+            router.refresh();
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            showToast("error", errData.message || "Failed to dispatch trip to loading deck.");
+          }
+        } catch (e) {
+          console.error(e);
+          showToast("error", "An error occurred while dispatching to loading deck.");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
-
 
   // Quick Dispatch Complete (Locks edits, marks COMPLETED, releases fleet to AVAILABLE)
   const handleQuickDispatchComplete = async () => {
     if (includedRequests.length === 0) {
-      alert("Cannot complete: The trip has no cargo/requests included.");
+      showToast("warning", "Cannot complete: The trip has no cargo/requests included.");
       return;
     }
     if (hasUnsavedChanges) {
-      alert("⚠️ You have unsaved modifications in this combine allocation. Please click 'Save Allocation' first.");
+      showToast("warning", "You have unsaved modifications. Please click 'Save Allocation' first.");
       return;
     }
     const confirmMsg =
-      `⚡️ QUICK DISPATCH COMPLETE\n\n` +
       `Are you sure you want to mark Trip #${trip?.tripNo} as COMPLETED?\n\n` +
       `• Trip Status will change to 'COMPLETED'\n` +
       `• All ${includedRequests.length} included requests will change to 'COMPLETED'\n` +
       `• Assigned Vehicle and Driver will be released to 'AVAILABLE'\n` +
-      `• All future edits on this trip and requests will be strictly locked\n\n` +
-      `Do you want to proceed?`;
+      `• Future edits on this trip will be locked`;
 
-    if (!confirm(confirmMsg)) return;
-
-    setIsCompleting(true);
-    try {
-      const res = await fetch(`/api/trips/${trip.id}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTrip((prev: any) => ({ ...prev, status: "COMPLETED" }));
-        alert(`✅ Trip #${trip.tripNo} marked as COMPLETED!\nVehicle & Driver released to AVAILABLE.`);
-        router.refresh();
-      } else {
-        alert(data.message || "Failed to complete trip.");
-      }
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || "An unexpected error occurred while completing trip.");
-    } finally {
-      setIsCompleting(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "⚡ Quick Dispatch Complete",
+      message: confirmMsg,
+      confirmText: "Complete Trip",
+      isDestructive: false,
+      onConfirm: async () => {
+        setIsCompleting(true);
+        try {
+          const res = await fetch(`/api/trips/${trip.id}/complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setTrip((prev: any) => ({ ...prev, status: "COMPLETED" }));
+            showToast("success", `Trip #${trip.tripNo} marked as COMPLETED! Vehicle & Driver released.`);
+            router.refresh();
+          } else {
+            showToast("error", data.message || "Failed to complete trip.");
+          }
+        } catch (err: any) {
+          console.error(err);
+          showToast("error", err.message || "An error occurred while completing trip.");
+        } finally {
+          setIsCompleting(false);
+        }
+      },
+    });
   };
 
   // Reverse Trip (Rollback allocation, revert requests to SUBMITTED, release fleet)
@@ -669,30 +693,37 @@ export function CombineWorkbenchClient({
       "• All included requests will return to 'SUBMITTED' status.\n" +
       "• The assigned vehicle and driver will become 'AVAILABLE'.\n" +
       "• Any issued gate pass entries for this trip will be removed.\n" +
-      "• This trip allocation will be completely deleted.\n\n" +
-      "Do you want to proceed?";
+      "• This trip allocation will be completely deleted.";
 
-    if (!confirm(msg)) return;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/allocations/combine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reverse", tripId: trip.id }),
-      });
-      if (res.ok) {
-        router.push("/allocations/fg/combine");
-        router.refresh();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to reverse trip.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("An unexpected error occurred while reversing trip.");
-    } finally {
-      setSaving(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Reverse and Cancel Trip",
+      message: msg,
+      confirmText: "Reverse Trip",
+      isDestructive: true,
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          const res = await fetch("/api/allocations/combine", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "reverse", tripId: trip.id }),
+          });
+          if (res.ok) {
+            router.push("/allocations/fg/combine");
+            router.refresh();
+          } else {
+            const data = await res.json();
+            showToast("error", data.error || "Failed to reverse trip.");
+          }
+        } catch (e) {
+          console.error(e);
+          showToast("error", "An unexpected error occurred while reversing trip.");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
 
   const showNotification = () => {
@@ -850,10 +881,68 @@ export function CombineWorkbenchClient({
   return (
     <div className="space-y-6">
       {/* Toast alert */}
-      {saveSuccess && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg border border-emerald-500 text-xs font-bold transition-all">
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-50 flex items-center gap-2 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-bold transition-all border animate-in fade-in slide-in-from-top-2 duration-150 ${
+            toast.type === "success"
+              ? "bg-emerald-600 border-emerald-500"
+              : toast.type === "warning"
+              ? "bg-amber-600 border-amber-500"
+              : "bg-rose-600 border-rose-500"
+          }`}
+        >
+          {toast.type === "success" && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+          {toast.type === "warning" && <AlertTriangle className="w-4 h-4 shrink-0" />}
+          {toast.type === "error" && <AlertCircle className="w-4 h-4 shrink-0" />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {saveSuccess && !toast && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg border border-emerald-500 text-xs font-bold transition-all">
           <CheckCircle2 className="w-4 h-4" />
           <span>Allocation saved successfully!</span>
+        </div>
+      )}
+
+      {/* In-app Confirmation Modal */}
+      {confirmModal?.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2.5 rounded-xl ${
+                  confirmModal.isDestructive ? "bg-rose-50 text-rose-600" : "bg-indigo-50 text-indigo-600"
+                }`}
+              >
+                {confirmModal.isDestructive ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+              </div>
+              <h3 className="text-sm font-bold text-gray-900">{confirmModal.title}</h3>
+            </div>
+            <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">{confirmModal.message}</p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const onConfirm = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  onConfirm();
+                }}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold text-white shadow-xs transition cursor-pointer ${
+                  confirmModal.isDestructive ? "bg-rose-600 hover:bg-rose-700" : "bg-indigo-600 hover:bg-indigo-700"
+                }`}
+              >
+                {confirmModal.confirmText || "Confirm"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

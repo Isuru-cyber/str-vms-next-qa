@@ -44,7 +44,7 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Request not found." }, { status: 404 });
     }
 
-    if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0 && !canAccessPlant(user, request.plantId)) {
+    if (!isAdmin(user) && !canAccessPlant(user, request.plantId)) {
       return NextResponse.json(
         { success: false, message: "Forbidden: Plant access restricted." },
         { status: 403 }

@@ -1,10 +1,19 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { can, isAdmin } from "@/lib/permission-utils";
 import { SettingsHub } from "@/components/settings/SettingsHub";
 
 export default async function SettingsPage() {
   const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!isAdmin(user) && !can(user, "manage_users") && !can(user, "manage_system_settings")) {
+    redirect("/");
+  }
 
   let users: any[] = [];
   try {

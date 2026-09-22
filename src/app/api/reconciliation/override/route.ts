@@ -35,54 +35,60 @@ export async function POST(req: NextRequest) {
 
     const tripIdNum = Number(tripId);
 
-    // Find existing reconciliation or create new
-    const existingRec = await prisma.tripReconciliation.findFirst({
-      where: {
+    await prisma.$transaction(async (tx: any) => {
+      // Find existing reconciliation or create new
+      const existingRec = await tx.tripReconciliation.findFirst({
+        where: {
+          tripId: tripIdNum,
+          OR: [
+            { invoiceNumbers: primaryKey },
+            { gatePassNo: primaryKey },
+          ],
+        },
+      });
+
+      const recData = {
         tripId: tripIdNum,
-        OR: [
-          { invoiceNumbers: primaryKey },
-          { gatePassNo: primaryKey },
-        ],
-      },
-    });
+        gatePassNo: primaryKey,
+        invoiceNumbers: primaryKey,
+        actualVehicleNo: actualVehicle || null,
+        actualBoxes: actualBoxes ? Number(actualBoxes) : 0,
+        actualKg: actualKg ? Number(actualKg) : 0,
+        actualCbm: actualCbm ? Number(actualCbm) : 0,
+        matchStatus: "MANUAL_OVERRIDE",
+        varianceRemarks: `Manual Override: ${overrideReason.trim()}`,
+        reconciledBy: user.id,
+        reconciledAt: new Date(),
+      };
 
-    const recData = {
-      tripId: tripIdNum,
-      gatePassNo: primaryKey,
-      invoiceNumbers: primaryKey,
-      actualVehicleNo: actualVehicle || null,
-      actualBoxes: actualBoxes ? Number(actualBoxes) : 0,
-      actualKg: actualKg ? Number(actualKg) : 0,
-      actualCbm: actualCbm ? Number(actualCbm) : 0,
-      matchStatus: "MANUAL_OVERRIDE",
-      varianceRemarks: `Manual Override: ${overrideReason.trim()}`,
-      reconciledBy: user.id,
-      reconciledAt: new Date(),
-    };
+      if (existingRec) {
+        await tx.tripReconciliation.update({
+          where: { id: existingRec.id },
+          data: recData,
+        });
+      } else {
+        await tx.tripReconciliation.create({
+          data: recData,
+        });
+      }
 
-    if (existingRec) {
-      await prisma.tripReconciliation.update({
-        where: { id: existingRec.id },
-        data: recData,
-      });
-    } else {
-      await prisma.tripReconciliation.create({
-        data: recData,
-      });
-    }
-
-    // If trip is not yet finalized or closed, mark as RECONCILED
-    const targetTrip = await prisma.deliveryTrip.findUnique({
-      where: { id: tripIdNum },
-      select: { status: true },
-    });
-
-    if (targetTrip && !["FINALIZED", "CLOSED"].includes(targetTrip.status)) {
-      await prisma.deliveryTrip.update({
+      // Check trip status inside the same transaction
+      const targetTrip = await tx.deliveryTrip.findUnique({
         where: { id: tripIdNum },
-        data: { status: "RECONCILED" },
+        select: { status: true },
       });
-    }
+
+      if (!targetTrip) {
+        throw new Error("Target delivery trip not found.");
+      }
+
+      if (!["FINALIZED", "CLOSED"].includes(targetTrip.status)) {
+        await tx.deliveryTrip.update({
+          where: { id: tripIdNum },
+          data: { status: "RECONCILED" },
+        });
+      }
+    });
 
     await ActivityLogger.log(
       "DELIVERY_TRIPS",

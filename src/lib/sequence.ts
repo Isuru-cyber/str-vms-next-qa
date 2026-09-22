@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
 async function internalGenerateNextTripNo(tx: any): Promise<string> {
-  try {
-    await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(718291);");
-  } catch (e) {
-    console.warn("pg_advisory_xact_lock failed, proceeding:", e);
-  }
+  // Acquire transaction-scoped advisory lock to serialize trip sequence generation
+  await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(718291);");
 
   const latestTrip = await tx.deliveryTrip.findFirst({
     orderBy: { id: "desc" },
@@ -48,11 +45,8 @@ export async function generateNextTripNo(client?: any): Promise<string> {
 }
 
 async function internalGenerateNextRequestCode(tx: any): Promise<string> {
-  try {
-    await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(718292);");
-  } catch (e) {
-    console.warn("pg_advisory_xact_lock failed, proceeding:", e);
-  }
+  // Acquire transaction-scoped advisory lock to serialize request sequence generation
+  await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(718292);");
 
   const currentYear = new Date().getFullYear();
   const shortYear = String(currentYear).slice(-2);

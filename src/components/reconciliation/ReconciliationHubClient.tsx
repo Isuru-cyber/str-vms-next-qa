@@ -195,9 +195,19 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
         trips.map((t) => {
           const hasInv = (t.invoices && t.invoices.some((inv) => inv.invoiceNo === currentInv)) || t.id === tripTargetId;
           if (hasInv) {
+            const updatedInvoices = t.invoices?.map((inv) =>
+              inv.invoiceNo === currentInv ? { ...inv, status: "RECONCILED" } : inv
+            ) || [];
+            const allInvoicesReconciled = updatedInvoices.length > 0
+              ? updatedInvoices.every((inv) => inv.status === "RECONCILED" || inv.status === "MATCHED")
+              : true;
+
+            const isAlreadyFinal = ["FINALIZED", "CLOSED"].includes(t.status);
+            const nextStatus = isAlreadyFinal ? t.status : (allInvoicesReconciled ? "RECONCILED" : t.status);
+
             return {
               ...t,
-              status: "RECONCILED",
+              status: nextStatus,
               latestReconciliation: {
                 matchStatus: "MANUAL_OVERRIDE",
                 actualVehicleNo: actualVehicle,
@@ -206,9 +216,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                 actualCbm: parseFloat(actualCbm) || 0,
                 varianceRemarks: overrideRemarks,
               },
-              invoices: t.invoices?.map((inv) =>
-                inv.invoiceNo === currentInv ? { ...inv, status: "RECONCILED" } : inv
-              ),
+              invoices: updatedInvoices,
               gatePasses: t.gatePasses.map((gp) =>
                 gp.gatePassNo === currentInv ? { ...gp, status: "RECONCILED" } : gp
               ),

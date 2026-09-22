@@ -1,6 +1,8 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { can, isAdmin } from "@/lib/permission-utils";
 import { ExecutiveAnalyticsClient } from "@/components/analytics/ExecutiveAnalyticsClient";
 
 export const metadata = {
@@ -9,11 +11,37 @@ export const metadata = {
 };
 
 export default async function AnalyticsPage() {
-  await getSession();
+  const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!can(user, "view_analytics")) {
+    redirect("/");
+  }
+
+  const tripWhere: any = {};
+  const requestWhere: any = {};
+
+  if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
+    tripWhere.tripRequests = {
+      some: {
+        request: {
+          plantId: { in: user.plantIds },
+        },
+      },
+    };
+    requestWhere.plantId = { in: user.plantIds };
+  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
+    tripWhere.id = -1;
+    requestWhere.id = -1;
+  }
 
   let trips: any[] = [];
   try {
     trips = await prisma.deliveryTrip.findMany({
+      where: tripWhere,
+      take: 500,
       orderBy: { createdAt: "desc" },
       include: {
         vehicle: true,
@@ -39,6 +67,8 @@ export default async function AnalyticsPage() {
   let requests: any[] = [];
   try {
     requests = await prisma.vehicleRequest.findMany({
+      where: requestWhere,
+      take: 500,
       orderBy: { createdAt: "desc" },
       include: {
         plant: true,

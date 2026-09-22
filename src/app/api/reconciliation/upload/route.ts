@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
         include: {
           vehicle: true,
           driver: true,
+          gatePasses: true,
           tripRequests: {
             include: {
               request: true,
@@ -171,21 +172,26 @@ export async function POST(req: NextRequest) {
         ? "Matched with Datatex ERP dispatch register"
         : `Weight Variance: Planned ${vmsKg} kg vs Actual ${datatexInv.total_kg} kg (Diff: ${(datatexInv.total_kg - vmsKg).toFixed(2)} kg)`;
 
-      // Persist reconciliation record
+      // Persist reconciliation record without polluting gatePassNo with invoice number
       const existingRec = await prisma.tripReconciliation.findFirst({
         where: {
           tripId,
           OR: [
             { invoiceNumbers: invNo },
-            { gatePassNo: invNo },
             ...(datatexInv.gate_pass_no ? [{ gatePassNo: datatexInv.gate_pass_no }] : []),
           ],
         },
       });
 
+      const matchedRequest = vmsMatch.request;
+      const matchedGp = datatexInv.gate_pass_no ||
+        trip.gatePasses?.find((gp: any) => gp.requestId === matchedRequest?.id)?.gatePassNo ||
+        trip.gatePasses?.[0]?.gatePassNo ||
+        "N/A";
+
       const recData = {
         tripId,
-        gatePassNo: datatexInv.gate_pass_no || invNo,
+        gatePassNo: matchedGp,
         actualVehicleNo: datatexInv.vehicle_no || trip.vehicle?.vehicleNumber || null,
         actualBoxes: datatexInv.total_boxes || 0,
         actualKg: datatexInv.total_kg || 0,
@@ -224,19 +230,15 @@ export async function POST(req: NextRequest) {
         match_status: status,
         vms_trip_id: tripId,
         vms_trip_no: trip.tripNo,
-        vms_vehicle: trip.vehicle?.vehicleNumber || datatexInv.vehicle_no || "-",
-        vms_kg: vmsKg,
-        vms_boxes: vmsBoxes,
         variance_kg: Number((datatexInv.total_kg - vmsKg).toFixed(2)),
-        variance_remarks: remarks,
       });
     }
 
     await ActivityLogger.log(
       "RECONCILIATION",
-      "DATATEX_INVOICE_RECONCILIATION_SYNC",
-      file.name,
-      `Uploaded ${file.name}: ${matchedCount} Matched, ${varianceCount} Variances, ${unmatchedCount} Unmatched Invoices`,
+      "UPLOAD",
+      `Batch Upload (${invoiceKeys.length} Invoices)`,
+      `Processed ${invoiceKeys.length} ERP dispatch records. Matched: ${matchedCount}, Variance: ${varianceCount}, Unmatched: ${unmatchedCount}`,
       user.id
     );
 
@@ -244,7 +246,7 @@ export async function POST(req: NextRequest) {
       success: true,
       total_rows: parseResult.total_rows,
       invoice_count: invoiceKeys.length,
-      gate_pass_count: invoiceKeys.length,
+      gate_pass_count: Object.keys(parseResult.gate_passes || {}).length,
       matched: matchedCount,
       variance: varianceCount,
       unmatched: unmatchedCount,

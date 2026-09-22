@@ -72,32 +72,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Generate formatted Request Code REQ-YYYY-NNNN
-    const requestCode = await generateNextRequestCode();
+    // Generate formatted Request Code and create request atomically within a single transaction
+    const newRequest = await prisma.$transaction(async (tx: any) => {
+      const requestCode = await generateNextRequestCode(tx);
 
-    const newRequest = await prisma.vehicleRequest.create({
-      data: {
-        requestCode,
-        requesterId: user.id,
-        plantId: Number(plantId),
-        operationId: Number(operationId),
-        subOperationId: subOperationId ? Number(subOperationId) : null,
-        vehicleTypeId: vehicleTypeId ? Number(vehicleTypeId) : null,
-        fromLocationId: Number(fromLocationId),
-        toLocationId: Number(toLocationId),
-        requiredDate: new Date(requiredDate),
-        requiredTime: String(requiredTime),
-        requiredKg: requiredKg ? Number(requiredKg) : null,
-        requiredCbm: requiredCbm ? Number(requiredCbm) : null,
-        boxCount: boxCount ? Number(boxCount) : null,
-        goodsReadyStatus: goodsReadyStatus ? String(goodsReadyStatus) : "Ready",
-        invoiceNumbers: invoiceNumbers ? String(invoiceNumbers) : null,
-        urgency: urgency || "Normal",
-        itemDescription: String(itemDescription),
-        remarks: remarks ? String(remarks) : null,
-        status: "SUBMITTED",
-      },
+      return tx.vehicleRequest.create({
+        data: {
+          requestCode,
+          requesterId: user.id,
+          plantId: Number(plantId),
+          operationId: Number(operationId),
+          subOperationId: subOperationId ? Number(subOperationId) : null,
+          vehicleTypeId: vehicleTypeId ? Number(vehicleTypeId) : null,
+          fromLocationId: Number(fromLocationId),
+          toLocationId: Number(toLocationId),
+          requiredDate: new Date(requiredDate),
+          requiredTime: String(requiredTime),
+          requiredKg: requiredKg ? Number(requiredKg) : null,
+          requiredCbm: requiredCbm ? Number(requiredCbm) : null,
+          boxCount: boxCount ? Number(boxCount) : null,
+          goodsReadyStatus: goodsReadyStatus ? String(goodsReadyStatus) : "Ready",
+          invoiceNumbers: invoiceNumbers ? String(invoiceNumbers) : null,
+          urgency: urgency || "Normal",
+          itemDescription: String(itemDescription),
+          remarks: remarks ? String(remarks) : null,
+          status: "SUBMITTED",
+        },
+      });
     });
+
+    const requestCode = newRequest.requestCode;
 
     // Notify Central Fleet Dispatch
     try {

@@ -1,19 +1,42 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { can, isAdmin } from "@/lib/permission-utils";
 import { CombineTripsRegistryClient } from "@/components/allocations/CombineTripsRegistryClient";
 
 export default async function CombineOverviewPage() {
-  await getSession();
+  const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!can(user, "view_allocations")) {
+    redirect("/");
+  }
 
   let combineTrips: any[] = [];
   let availableVehicles: any[] = [];
   let availableDrivers: any[] = [];
   let activeRoutes: any[] = [];
 
+  const tripWhere: any = {};
+  if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
+    tripWhere.tripRequests = {
+      some: {
+        request: {
+          plantId: { in: user.plantIds },
+        },
+      },
+    };
+  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
+    tripWhere.id = -1;
+  }
+
   try {
     const [trips, vehicles, drivers, routes] = await Promise.all([
       prisma.deliveryTrip.findMany({
+        where: tripWhere,
         include: {
           vehicle: true,
           driver: true,

@@ -39,15 +39,14 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
   // Filter trips by tab
   const pendingTrips = trips.filter(
     (t) =>
-      t.status === "READY_FOR_LOADING" ||
+      t.status === "READY_FOR_LOADING" &&
       (!t.gatePasses || t.gatePasses.length === 0)
   );
 
   const completedTrips = trips.filter(
     (t) =>
-      t.status !== "READY_FOR_LOADING" &&
-      t.gatePasses &&
-      t.gatePasses.length > 0
+      t.status === "GATE_PASS_ISSUED" ||
+      (t.gatePasses && t.gatePasses.length > 0)
   );
 
   const currentTabTrips = activeTab === "pending" ? pendingTrips : completedTrips;
@@ -72,13 +71,15 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
     const initialInputs: Record<number, string> = {};
     const initialRemarks: Record<number, string> = {};
 
-    (trip.tripRequests || []).forEach((tr: any) => {
-      const existingGps = (trip.gatePasses || [])
-        .filter((gp: any) => gp.requestId === tr.request?.id)
-        .map((gp: any) => gp.gatePassNo)
-        .join(", ");
-      initialInputs[tr.request?.id] = existingGps;
-      initialRemarks[tr.request?.id] = "";
+    trip.tripRequests?.forEach((tr: any) => {
+      const existing = trip.gatePasses?.filter((gp: any) => gp.requestId === tr.requestId);
+      if (existing && existing.length > 0) {
+        initialInputs[tr.requestId] = existing.map((e: any) => e.gatePassNo).join(", ");
+        initialRemarks[tr.requestId] = existing[0]?.remarks || "";
+      } else {
+        initialInputs[tr.requestId] = "";
+        initialRemarks[tr.requestId] = "";
+      }
     });
 
     setGatePassInputs(initialInputs);
@@ -86,8 +87,8 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
     setGatePassModal(true);
   };
 
-  const handleSaveGatePasses = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveGatePasses = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!selectedTrip) return;
     setSaving(true);
 
@@ -109,7 +110,8 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save gate passes.");
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to save gate passes");
       }
 
       // Update local state
@@ -124,7 +126,7 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
                 .filter(Boolean);
               passNumbers.forEach((no) => {
                 newGps.push({
-                  id: Math.random(),
+                  id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${no}`,
                   tripId: t.id,
                   requestId: p.requestId,
                   gatePassNo: no,

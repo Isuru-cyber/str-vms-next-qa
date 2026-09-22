@@ -1,14 +1,48 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { can, isAdmin } from "@/lib/permission-utils";
 import { LiveMapWrapper } from "@/components/map/LiveMapWrapper";
 
 export default async function LiveMapPage() {
-  await getSession();
+  const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!can(user, "view_map")) {
+    redirect("/");
+  }
 
   let mappedLocations: any[] = [];
   let unmappedLocations: any[] = [];
   let activeTrips: any[] = [];
   let consolidationPoints: any[] = [];
+
+  const tripWhere: any = {
+    status: { in: ["ASSIGNED", "READY_FOR_LOADING", "GATE_PASS_ISSUED", "DISPATCHED", "IN_TRANSIT"] },
+  };
+  const reqWhere: any = {
+    status: "SUBMITTED",
+    toLocation: {
+      latitude: { not: null },
+      longitude: { not: null },
+    },
+  };
+
+  if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
+    tripWhere.tripRequests = {
+      some: {
+        request: {
+          plantId: { in: user.plantIds },
+        },
+      },
+    };
+    reqWhere.plantId = { in: user.plantIds };
+  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
+    tripWhere.id = -1;
+    reqWhere.id = -1;
+  }
 
   try {
     const [allLocs, trips, pendingReqs] = await Promise.all([
@@ -17,9 +51,7 @@ export default async function LiveMapPage() {
         orderBy: { locationName: "asc" },
       }),
       prisma.deliveryTrip.findMany({
-        where: {
-          status: { in: ["ASSIGNED", "READY_FOR_LOADING", "GATE_PASS_ISSUED", "DISPATCHED", "IN_TRANSIT"] },
-        },
+        where: tripWhere,
         include: {
           vehicle: true,
           driver: true,
@@ -34,13 +66,7 @@ export default async function LiveMapPage() {
         },
       }),
       prisma.vehicleRequest.findMany({
-        where: {
-          status: "SUBMITTED",
-          toLocation: {
-            latitude: { not: null },
-            longitude: { not: null },
-          },
-        },
+        where: reqWhere,
         include: {
           toLocation: true,
         },

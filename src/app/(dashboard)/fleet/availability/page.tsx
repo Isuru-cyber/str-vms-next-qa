@@ -1,6 +1,8 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { can, isAdmin } from "@/lib/permission-utils";
 import { FleetAvailabilityView, VehicleAvailabilityItem } from "@/components/fleet/FleetAvailabilityView";
 
 export default async function FleetAvailabilityPage({
@@ -8,7 +10,17 @@ export default async function FleetAvailabilityPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  await getSession();
+  const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!can(user, "view_fleet")) {
+    redirect("/");
+  }
+
+  const canViewDriverPhone = isAdmin(user) || can(user, "manage_fleet") || can(user, "allocate_trips");
+
   const { month } = await searchParams;
 
   const now = new Date();
@@ -18,13 +30,20 @@ export default async function FleetAvailabilityPage({
       : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   const [yearStr, monthStr] = currentMonth.split("-");
-  const startDate = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
-  const endDate = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0, 23, 59, 59);
+  const parsedYear = parseInt(yearStr, 10);
+  const parsedMonth = parseInt(monthStr, 10);
+
+  // Validate bounds (year between 2000 and 2100, month between 1 and 12)
+  const safeYear = isNaN(parsedYear) || parsedYear < 2000 || parsedYear > 2100 ? now.getFullYear() : parsedYear;
+  const safeMonth = isNaN(parsedMonth) || parsedMonth < 1 || parsedMonth > 12 ? now.getMonth() + 1 : parsedMonth;
+
+  const startDate = new Date(safeYear, safeMonth - 1, 1);
+  const endDate = new Date(safeYear, safeMonth, 0, 23, 59, 59);
 
   let vehicleItems: VehicleAvailabilityItem[] = [];
 
   try {
-    const [vehicles, monthTrips] = await Promise.all([
+    const [vehicles, monthTrips, activeTrips] = await Promise.all([
       prisma.vehicle.findMany({
         where: { active: 1 },
         include: {
@@ -52,19 +71,17 @@ export default async function FleetAvailabilityPage({
           plannedKm: true,
         },
       }),
+      prisma.deliveryTrip.findMany({
+        where: {
+          status: { in: ["ASSIGNED", "READY_FOR_LOADING", "DISPATCHED", "IN_TRANSIT"] },
+        },
+        select: {
+          id: true,
+          tripNo: true,
+          vehicleId: true,
+        },
+      }),
     ]);
-
-    // Active trips currently on the road (any date)
-    const activeTrips = await prisma.deliveryTrip.findMany({
-      where: {
-        status: { in: ["ASSIGNED", "READY_FOR_LOADING", "DISPATCHED", "IN_TRANSIT"] },
-      },
-      select: {
-        id: true,
-        tripNo: true,
-        vehicleId: true,
-      },
-    });
 
     const activeTripMap = new Map<number, { id: number; tripNo: string }>();
     activeTrips.forEach((t: any) => activeTripMap.set(t.vehicleId, { id: t.id, tripNo: t.tripNo }));
@@ -91,7 +108,7 @@ export default async function FleetAvailabilityPage({
         activeTripNo: activeTrip?.tripNo || null,
         activeTripId: activeTrip?.id || null,
         driverName: v.drivers?.[0]?.name || null,
-        driverPhone: v.drivers?.[0]?.mobile || null,
+        driverPhone: canViewDriverPhone ? (v.drivers?.[0]?.mobile || null) : null,
         mtdKm,
         mtdTrips,
         targetLimit,

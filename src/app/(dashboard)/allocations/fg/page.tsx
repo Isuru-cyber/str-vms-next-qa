@@ -1,14 +1,25 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { can, isAdmin } from "@/lib/permission-utils";
 import { FgAllocationHubClient } from "@/components/allocations/FgAllocationHubClient";
 
 export default async function FgAllocationPage() {
   const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!can(user, "view_allocations")) {
+    redirect("/");
+  }
 
   const whereClause: any = {};
-  if (user && user.roleCode === "ENTRY_USER" && user.plantIds?.length > 0) {
+  if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
     whereClause.plantId = { in: user.plantIds };
+  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
+    whereClause.plantId = -1;
   }
 
   const [requests, plants, operations, vehicles, drivers, routes] = await Promise.all([
