@@ -172,17 +172,6 @@ export async function POST(req: NextRequest) {
         ? "Matched with Datatex ERP dispatch register"
         : `Weight Variance: Planned ${vmsKg} kg vs Actual ${datatexInv.total_kg} kg (Diff: ${(datatexInv.total_kg - vmsKg).toFixed(2)} kg)`;
 
-      // Persist reconciliation record without polluting gatePassNo with invoice number
-      const existingRec = await prisma.tripReconciliation.findFirst({
-        where: {
-          tripId,
-          OR: [
-            { invoiceNumbers: invNo },
-            ...(datatexInv.gate_pass_no ? [{ gatePassNo: datatexInv.gate_pass_no }] : []),
-          ],
-        },
-      });
-
       const matchedRequest = vmsMatch.request;
       const matchedGp = datatexInv.gate_pass_no ||
         trip.gatePasses?.find((gp: any) => gp.requestId === matchedRequest?.id)?.gatePassNo ||
@@ -206,24 +195,42 @@ export async function POST(req: NextRequest) {
         reconciledAt: new Date(),
       };
 
-      if (existingRec) {
-        await prisma.tripReconciliation.update({
-          where: { id: existingRec.id },
-          data: recData,
+      // Atomic transaction for finding, persisting reconciliation and updating trip status
+      await prisma.$transaction(async (tx: any) => {
+        const existingRec = await tx.tripReconciliation.findFirst({
+          where: {
+            tripId,
+            OR: [
+              { invoiceNumbers: invNo },
+              ...(datatexInv.gate_pass_no ? [{ gatePassNo: datatexInv.gate_pass_no }] : []),
+            ],
+          },
         });
-      } else {
-        await prisma.tripReconciliation.create({
-          data: recData,
-        });
-      }
 
-      // If trip is not yet finalized or closed, transition to RECONCILED
-      if (!["FINALIZED", "CLOSED"].includes(trip.status)) {
-        await prisma.deliveryTrip.update({
+        if (existingRec) {
+          await tx.tripReconciliation.update({
+            where: { id: existingRec.id },
+            data: recData,
+          });
+        } else {
+          await tx.tripReconciliation.create({
+            data: recData,
+          });
+        }
+
+        // Only transition to RECONCILED if trip is not already FINALIZED or CLOSED
+        const currentTrip = await tx.deliveryTrip.findUnique({
           where: { id: tripId },
-          data: { status: "RECONCILED" },
+          select: { status: true },
         });
-      }
+
+        if (currentTrip && !["FINALIZED", "CLOSED", "RECONCILED"].includes(currentTrip.status)) {
+          await tx.deliveryTrip.update({
+            where: { id: tripId },
+            data: { status: "RECONCILED" },
+          });
+        }
+      });
 
       comparisonList.push({
         ...datatexInv,

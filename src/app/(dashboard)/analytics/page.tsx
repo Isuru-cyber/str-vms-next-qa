@@ -88,7 +88,19 @@ export default async function AnalyticsPage() {
   let vehicles: any[] = [];
   try {
     vehicles = await prisma.vehicle.findMany({
-      where: { active: 1 },
+      where: {
+        active: 1,
+        ...(!isAdmin(user)
+          ? user.plantIds?.length
+            ? {
+                OR: [
+                  { defaultLocation: { plantId: { in: user.plantIds } } },
+                  { drivers: { some: { linkedPlantId: { in: user.plantIds } } } },
+                ],
+              }
+            : { id: -1 }
+          : {}),
+      },
       orderBy: { vehicleNumber: "asc" },
       include: {
         drivers: true,
@@ -101,6 +113,11 @@ export default async function AnalyticsPage() {
   let plants: any[] = [];
   try {
     plants = await prisma.plant.findMany({
+      where: !isAdmin(user)
+        ? user.plantIds?.length
+          ? { id: { in: user.plantIds } }
+          : { id: -1 }
+        : undefined,
       orderBy: { sortOrder: "asc" },
     });
   } catch (err) {
@@ -111,10 +128,16 @@ export default async function AnalyticsPage() {
   const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   let dieselRate = 382.0;
   try {
-    const fuelRateRecord = await prisma.monthlyFuelRate.findFirst({
+    let fuelRateRecord = await prisma.monthlyFuelRate.findFirst({
       where: { periodMonth: currentMonthStr },
       orderBy: { periodMonth: "desc" },
     });
+    if (!fuelRateRecord) {
+      // Fallback to most recent recorded fuel rate
+      fuelRateRecord = await prisma.monthlyFuelRate.findFirst({
+        orderBy: { periodMonth: "desc" },
+      });
+    }
     if (fuelRateRecord) {
       dieselRate = Number(fuelRateRecord.dieselRate);
     }

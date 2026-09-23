@@ -45,7 +45,19 @@ export default async function FleetAvailabilityPage({
   try {
     const [vehicles, monthTrips, activeTrips] = await Promise.all([
       prisma.vehicle.findMany({
-        where: { active: 1 },
+        where: {
+          active: 1,
+          ...(!isAdmin(user)
+            ? user.plantIds?.length
+              ? {
+                  OR: [
+                    { defaultLocation: { plantId: { in: user.plantIds } } },
+                    { drivers: { some: { linkedPlantId: { in: user.plantIds } } } },
+                  ],
+                }
+              : { id: -1 }
+            : {}),
+        },
         include: {
           defaultLocation: true,
           drivers: {

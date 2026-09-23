@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition, useMemo } from "react";
+import React, { useState, useEffect, useTransition, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -353,26 +353,31 @@ export function CombineWorkbenchClient({
     }
   }, []);
 
+  const includedRequestsRef = useRef(includedRequests);
+  useEffect(() => {
+    includedRequestsRef.current = includedRequests;
+  }, [includedRequests]);
+
   // Listen to window focus, storage (cross-tab route creation), and postMessage
   useEffect(() => {
     const handleFocus = () => {
-      if (includedRequests.length > 0) {
-        fetchSuggestedRoutes(includedRequests, false);
+      if (includedRequestsRef.current.length > 0) {
+        fetchSuggestedRoutes(includedRequestsRef.current, false);
       }
     };
 
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "ROUTE_CREATED") {
-        if (includedRequests.length > 0) {
-          fetchSuggestedRoutes(includedRequests, true);
+        if (includedRequestsRef.current.length > 0) {
+          fetchSuggestedRoutes(includedRequestsRef.current, true);
         }
       }
     };
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "STR_ROUTE_CREATED_TS") {
-        if (includedRequests.length > 0) {
-          fetchSuggestedRoutes(includedRequests, true);
+        if (includedRequestsRef.current.length > 0) {
+          fetchSuggestedRoutes(includedRequestsRef.current, true);
         }
       }
     };
@@ -386,7 +391,7 @@ export function CombineWorkbenchClient({
       window.removeEventListener("message", handleMessage);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [includedRequests, selectedRouteId]);
+  }, []);
 
   // Reorder: Move Up (Local Staged)
   const moveUp = (index: number) => {
@@ -486,7 +491,7 @@ export function CombineWorkbenchClient({
       return [
         {
           ...targetObj,
-          status: "SUBMITTED",
+          status: targetObj.originalStatus || (targetObj.status !== "ALLOCATED" ? targetObj.status : "SUBMITTED"),
         },
         ...prev,
       ];
@@ -500,6 +505,7 @@ export function CombineWorkbenchClient({
   const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transferModalReq || !targetTripId) return;
+    const reqToTransfer = transferModalReq;
     setIsTransferring(true);
     try {
       const res = await fetch("/api/allocations/combine", {
@@ -509,14 +515,16 @@ export function CombineWorkbenchClient({
           action: "transfer",
           sourceTripId: trip.id,
           targetTripId: Number(targetTripId),
-          requestId: transferModalReq.id,
+          requestId: reqToTransfer.id,
         }),
       });
       if (res.ok) {
-        setIncludedRequests((prev) => prev.filter((r) => r.id !== transferModalReq.id));
+        const remaining = includedRequests.filter((r) => r.id !== reqToTransfer.id);
+        setIncludedRequests(remaining);
         setTransferModalReq(null);
         setTargetTripId("");
         showToast("success", "Request transferred successfully!");
+        fetchSuggestedRoutes(remaining, true);
         router.refresh();
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -1030,16 +1038,14 @@ export function CombineWorkbenchClient({
                 <Clock className="w-4 h-4 text-amber-600" />
                 <span>Ready for Loading</span>
               </span>
-              <button
-                type="button"
-                onClick={handleQuickDispatchComplete}
-                disabled={isCompleting || saving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-                title="Complete this trip: Locks edits, marks requests COMPLETED, and releases vehicle & driver to AVAILABLE"
+              <Link
+                href="/dispatch/deck"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                title="Go to Factory Loading Deck to issue Gate Passes and dispatch"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isCompleting ? "Completing..." : "Complete Trip"}</span>
-              </button>
+                <span>Go to Dispatch Deck</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           ) : (
             <>
@@ -1060,13 +1066,13 @@ export function CombineWorkbenchClient({
               </button>
               <button
                 type="button"
-                onClick={handleQuickDispatchComplete}
-                disabled={isCompleting || saving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer ring-2 ring-emerald-400/20"
-                title="Complete Trip: Locks edits, marks requests COMPLETED, and releases vehicle & driver to AVAILABLE"
+                onClick={handleDispatchDeck}
+                disabled={saving || isCompleting}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer"
+                title="Dispatch this allocation to Factory Loading Deck for physical loading & gate pass"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isCompleting ? "Completing..." : "Complete Trip"}</span>
+                <Truck className="w-4 h-4 font-bold" />
+                <span>Dispatch to Deck</span>
               </button>
               <button
                 type="button"
@@ -1452,15 +1458,33 @@ export function CombineWorkbenchClient({
               >
                 {suggestedRoutes.length > 0 ? (
                   <>
-                    <option value="">Select a Route...</option>
+                    <option value="">Select a Suggested Route...</option>
                     {suggestedRoutes.map((r) => (
                       <option key={`sug-${r.id}`} value={r.id}>
-                        {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km
+                        ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km
+                      </option>
+                    ))}
+                    {routes && routes.length > 0 && (
+                      <optgroup label="All Available Routes">
+                        {routes.map((r: any) => (
+                          <option key={`all-${r.id}`} value={r.id}>
+                            {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                ) : routes && routes.length > 0 ? (
+                  <>
+                    <option value="">No exact suggestion — Choose from All Routes...</option>
+                    {routes.map((r: any) => (
+                      <option key={`fallback-${r.id}`} value={r.id}>
+                        {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
                       </option>
                     ))}
                   </>
                 ) : (
-                  <option value="">No matching route found</option>
+                  <option value="">No routes available</option>
                 )}
               </select>
             </div>

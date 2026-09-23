@@ -90,14 +90,24 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
   const handleSaveGatePasses = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!selectedTrip) return;
+
+    // H-16: Validate that at least one non-empty gate pass string is provided
+    const hasAnyGatePass = Object.values(gatePassInputs).some((val) => String(val).trim().length > 0);
+    if (!hasAnyGatePass) {
+      alert("Please enter at least one valid Gate Pass Number before saving.");
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const payload = Object.entries(gatePassInputs).map(([reqId, val]) => ({
-        requestId: parseInt(reqId, 10),
-        gatePassNo: val,
-        remarks: gatePassRemarks[parseInt(reqId, 10)] || null,
-      }));
+      const payload = Object.entries(gatePassInputs)
+        .filter(([_, val]) => String(val).trim().length > 0)
+        .map(([reqId, val]) => ({
+          requestId: parseInt(reqId, 10),
+          gatePassNo: String(val).trim(),
+          remarks: gatePassRemarks[parseInt(reqId, 10)]?.trim() || null,
+        }));
 
       const res = await fetch("/api/dispatch", {
         method: "POST",
@@ -502,8 +512,9 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
                 <button
                   type="button"
+                  disabled={saving}
                   onClick={() => setGatePassModal(false)}
-                  className="h-8 px-3.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200 transition-colors cursor-pointer"
+                  className="h-8 px-3.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>

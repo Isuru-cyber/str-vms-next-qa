@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       include: {
         vehicle: true,
         driver: true,
+        reconciliations: true,
         tripRequests: {
           include: {
             request: {
@@ -35,6 +36,17 @@ export async function POST(req: NextRequest) {
 
     if (!trip) {
       return NextResponse.json({ success: false, message: "Trip not found." }, { status: 404 });
+    }
+
+    if (["FINALIZED", "CLOSED"].includes(trip.status)) {
+      return NextResponse.json({ success: false, message: `Trip is already ${trip.status}.` }, { status: 400 });
+    }
+
+    if (trip.status !== "RECONCILED" && (!trip.reconciliations || trip.reconciliations.length === 0)) {
+      return NextResponse.json(
+        { success: false, message: "Cannot finalize an unreconciled trip. Please reconcile invoices first." },
+        { status: 400 }
+      );
     }
 
     await prisma.$transaction(async (tx: any) => {

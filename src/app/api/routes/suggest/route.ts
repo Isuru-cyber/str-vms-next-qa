@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorizeApi } from "@/lib/permissions";
 
-// Location alias mapping for duplicate / synonym master locations
-const LOCATION_ALIASES: Record<number, number[]> = {
+// Static fallback aliases for known duplicate / synonym master locations
+const FALLBACK_LOCATION_ALIASES: Record<number, number[]> = {
   153: [153, 197],
   197: [153, 197],
   100: [100, 193],
@@ -14,18 +14,64 @@ const LOCATION_ALIASES: Record<number, number[]> = {
   160: [155, 160],
 };
 
-function getAliases(id: number): number[] {
-  return LOCATION_ALIASES[id] || [id];
-}
+async function resolveLocationAliases(targetIds: number[]): Promise<Map<number, Set<number>>> {
+  const aliasMap = new Map<number, Set<number>>();
+  for (const tid of targetIds) {
+    const s = new Set<number>([tid]);
+    if (FALLBACK_LOCATION_ALIASES[tid]) {
+      FALLBACK_LOCATION_ALIASES[tid].forEach((id) => s.add(id));
+    }
+    aliasMap.set(tid, s);
+  }
 
-function matchesAnyAlias(locId: number, targetId: number): boolean {
-  const aliases = getAliases(targetId);
-  return aliases.includes(locId);
+  try {
+    const locations = await prisma.location.findMany({
+      where: { id: { in: targetIds } },
+      select: { id: true, code: true, locationName: true },
+    });
+
+    const conditions: any[] = [];
+    for (const loc of locations) {
+      if (loc.code && loc.code.trim().length > 0) {
+        conditions.push({ code: loc.code.trim() });
+      }
+      if (loc.locationName && loc.locationName.trim().length > 2) {
+        conditions.push({ locationName: { equals: loc.locationName.trim(), mode: "insensitive" } });
+      }
+    }
+
+    if (conditions.length > 0) {
+      const synonyms = await prisma.location.findMany({
+        where: {
+          active: 1,
+          OR: conditions,
+        },
+        select: { id: true, code: true, locationName: true },
+      });
+
+      for (const loc of locations) {
+        const set = aliasMap.get(loc.id) || new Set<number>([loc.id]);
+        for (const syn of synonyms) {
+          if (
+            (loc.code && syn.code && loc.code.trim().toLowerCase() === syn.code.trim().toLowerCase()) ||
+            (loc.locationName && syn.locationName && loc.locationName.trim().toLowerCase() === syn.locationName.trim().toLowerCase())
+          ) {
+            set.add(syn.id);
+          }
+        }
+        aliasMap.set(loc.id, set);
+      }
+    }
+  } catch (err) {
+    // If DB alias query fails, fallback safely to static/identity
+  }
+
+  return aliasMap;
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await authorizeApi();
+    const auth = await authorizeApi({ anyAction: ["view_routes", "view_allocations", "create_requests"] });
     if (auth.error) return auth.error;
     const { searchParams } = new URL(req.url);
     const fromIdStr = searchParams.get("from_id");
@@ -41,7 +87,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([]);
     }
 
-    // Extract target destination IDs
+    // Extract target destination IDs (capped at 20 to prevent DoS)
     let targetToIds: number[] = [];
     if (toIdsStr) {
       targetToIds = Array.from(
@@ -51,7 +97,7 @@ export async function GET(req: NextRequest) {
             .map((s) => Number(s.trim()))
             .filter((n) => !isNaN(n) && n > 0)
         )
-      );
+      ).slice(0, 20);
     } else if (toIdStr) {
       const tId = Number(toIdStr);
       if (!isNaN(tId) && tId > 0) {
@@ -62,6 +108,13 @@ export async function GET(req: NextRequest) {
     if (targetToIds.length === 0) {
       return NextResponse.json([]);
     }
+
+    const aliasMap = await resolveLocationAliases(targetToIds);
+    const matchesAnyAlias = (locId: number, targetId: number): boolean => {
+      const set = aliasMap.get(targetId);
+      if (set) return set.has(locId);
+      return locId === targetId;
+    };
 
     // Find all active routes starting from fromId
     const candidateRoutes = await prisma.route.findMany({

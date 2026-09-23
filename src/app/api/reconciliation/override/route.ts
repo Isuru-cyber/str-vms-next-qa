@@ -21,13 +21,14 @@ export async function POST(req: NextRequest) {
       overrideReason,
     } = body;
 
-    const primaryKey = String(invoiceNo || gatePassNo || "").trim().toUpperCase();
+    const cleanInvoiceNo = invoiceNo ? String(invoiceNo).trim().toUpperCase() : "";
+    const cleanGatePassNo = gatePassNo ? String(gatePassNo).trim().toUpperCase() : "";
 
-    if (!tripId || !primaryKey || !overrideReason?.trim()) {
+    if (!tripId || (!cleanInvoiceNo && !cleanGatePassNo) || !overrideReason?.trim()) {
       return NextResponse.json(
         {
           success: false,
-          message: "Trip ID, Commercial Invoice / Gate Pass No, and a valid Audit Override Reason are required.",
+          message: "Trip ID, at least one of Commercial Invoice No or Gate Pass No, and a valid Audit Override Reason are required.",
         },
         { status: 400 }
       );
@@ -36,21 +37,22 @@ export async function POST(req: NextRequest) {
     const tripIdNum = Number(tripId);
 
     await prisma.$transaction(async (tx: any) => {
-      // Find existing reconciliation or create new
+      // Find existing reconciliation using specific clauses
+      const whereConditions: any[] = [];
+      if (cleanInvoiceNo) whereConditions.push({ invoiceNumbers: cleanInvoiceNo });
+      if (cleanGatePassNo) whereConditions.push({ gatePassNo: cleanGatePassNo });
+
       const existingRec = await tx.tripReconciliation.findFirst({
         where: {
           tripId: tripIdNum,
-          OR: [
-            { invoiceNumbers: primaryKey },
-            { gatePassNo: primaryKey },
-          ],
+          OR: whereConditions,
         },
       });
 
       const recData = {
         tripId: tripIdNum,
-        gatePassNo: primaryKey,
-        invoiceNumbers: primaryKey,
+        gatePassNo: cleanGatePassNo || (existingRec?.gatePassNo ?? "N/A"),
+        invoiceNumbers: cleanInvoiceNo || (existingRec?.invoiceNumbers ?? cleanGatePassNo),
         actualVehicleNo: actualVehicle || null,
         actualBoxes: actualBoxes ? Number(actualBoxes) : 0,
         actualKg: actualKg ? Number(actualKg) : 0,
@@ -90,17 +92,18 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    const displayKey = [cleanInvoiceNo, cleanGatePassNo].filter(Boolean).join(" / ");
     await ActivityLogger.log(
       "DELIVERY_TRIPS",
       "RECONCILIATION_MANUAL_OVERRIDE",
       String(tripIdNum),
-      `Manual override applied for Invoice [${primaryKey}]. Reason: ${overrideReason.trim()}`,
+      `Manual override applied for [${displayKey}]. Reason: ${overrideReason.trim()}`,
       user.id
     );
 
     return NextResponse.json({
       success: true,
-      message: `Manual override applied for Invoice ${primaryKey}.`,
+      message: `Manual override applied for ${displayKey}.`,
     });
   } catch (err: any) {
     console.error("Manual override error:", err);

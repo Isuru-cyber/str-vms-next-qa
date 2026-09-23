@@ -4,7 +4,7 @@ import { authorizeApi } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await authorizeApi();
+    const auth = await authorizeApi({ anyAction: ["view_routes", "view_allocations", "create_requests"] });
     if (auth.error) return auth.error;
     const { searchParams } = new URL(req.url);
     const originIdStr = searchParams.get("origin_id");

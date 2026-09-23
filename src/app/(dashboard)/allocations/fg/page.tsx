@@ -50,18 +50,45 @@ export default async function FgAllocationPage() {
       orderBy: [{ requiredDate: "desc" }, { id: "desc" }],
       take: 500,
     }),
-    prisma.plant.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.plant.findMany({
+      where: !isAdmin(user) ? (user.plantIds?.length ? { id: { in: user.plantIds } } : { id: -1 }) : undefined,
+      orderBy: { sortOrder: "asc" }
+    }),
     prisma.operation.findMany({ orderBy: { name: "asc" } }),
     prisma.vehicle.findMany({
-      where: { active: 1 },
+      where: {
+        active: 1,
+        ...(!isAdmin(user)
+          ? user.plantIds?.length
+            ? {
+                OR: [
+                  { defaultLocation: { plantId: { in: user.plantIds } } },
+                  { drivers: { some: { linkedPlantId: { in: user.plantIds } } } },
+                ],
+              }
+            : { id: -1 }
+          : {}),
+      },
       orderBy: { vehicleNumber: "asc" },
     }),
     prisma.driver.findMany({
-      where: { active: 1 },
+      where: {
+        active: 1,
+        ...(!isAdmin(user)
+          ? user.plantIds?.length
+            ? { linkedPlantId: { in: user.plantIds } }
+            : { id: -1 }
+          : {}),
+      },
       orderBy: { name: "asc" },
     }),
     prisma.route.findMany({
-      where: { active: 1 },
+      where: {
+        active: 1,
+        ...(!isAdmin(user) && user.plantIds?.length
+          ? { originLocation: { plantId: { in: user.plantIds } } }
+          : {}),
+      },
       orderBy: { routeName: "asc" },
     }),
   ]);

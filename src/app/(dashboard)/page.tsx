@@ -18,15 +18,43 @@ import {
   Package,
   ArrowRight,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/permissions";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CostCalculator } from "@/lib/cost-calculator";
 import { TrendPerformanceChart, FleetUtilDoughnutChart } from "@/components/dashboard/DashboardCharts";
 
 export default async function DashboardPage() {
-  await getSession();
+  const user = await getSession();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const tripWhere: any = {};
+  const requestWhere: any = {};
+  const vehicleWhere: any = { active: 1 };
+
+  if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
+    tripWhere.tripRequests = {
+      some: {
+        request: {
+          plantId: { in: user.plantIds },
+        },
+      },
+    };
+    requestWhere.plantId = { in: user.plantIds };
+    vehicleWhere.OR = [
+      { defaultLocation: { plantId: { in: user.plantIds } } },
+      { drivers: { some: { linkedPlantId: { in: user.plantIds } } } }
+    ];
+  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
+    tripWhere.id = -1;
+    requestWhere.id = -1;
+    vehicleWhere.id = -1;
+  }
 
   const now = new Date();
   const currentMonthLabel = now.toLocaleDateString("en-US", { month: "short", year: "numeric" });
@@ -76,32 +104,35 @@ export default async function DashboardPage() {
       topPlantsRaw,
       recentDispatched,
     ] = await Promise.all([
-      // Diesel Rate
+      // Diesel Rate: try current month first, then latest
       prisma.monthlyFuelRate.findFirst({
+        where: { periodMonth: currentMonthStr },
         orderBy: { periodMonth: "desc" },
-      }),
-      // Total Vehicles
+      }).then(r => r || prisma.monthlyFuelRate.findFirst({ orderBy: { periodMonth: "desc" } })),
+      // Total Vehicles scoped
       prisma.vehicle.findMany({
-        where: { active: 1 },
+        where: vehicleWhere,
         select: { id: true, status: true, vehicleNumber: true, vehicleType: true },
       }),
-      // Pending Demands
+      // Pending Demands scoped
       prisma.vehicleRequest.count({
-        where: { status: { in: ["SUBMITTED", "UNDER REVIEW"] } },
+        where: { ...requestWhere, status: { in: ["SUBMITTED", "UNDER REVIEW"] } },
       }),
-      // Consolidation Opps (Same Date & Origin with >1 requests)
+      // Consolidation Opps scoped
       prisma.vehicleRequest.groupBy({
         by: ["requiredDate", "fromLocationId"],
-        where: { status: "SUBMITTED" },
+        where: { ...requestWhere, status: "SUBMITTED" },
         _count: { id: true },
         having: { id: { _count: { gt: 1 } } },
       }),
-      // This Month Trips with Linked Requests for Costing & Savings
+      // This Month Trips with Linked Requests for Costing & Savings (scoped + take: 500)
       prisma.deliveryTrip.findMany({
         where: {
+          ...tripWhere,
           status: { not: "CANCELLED" },
           createdAt: { gte: startOfMonth },
         },
+        take: 500,
         include: {
           vehicle: true,
           driver: true,
@@ -119,23 +150,26 @@ export default async function DashboardPage() {
         },
         orderBy: { createdAt: "desc" },
       }),
-      // 7-Day Performance Trend
+      // 7-Day Performance Trend (scoped + take: 500)
       prisma.deliveryTrip.findMany({
         where: {
+          ...tripWhere,
           createdAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
           status: { not: "CANCELLED" },
         },
+        take: 500,
         select: {
           createdAt: true,
           plannedKm: true,
           actualKm: true,
         },
       }),
-      // Top Plant Demand
+      // Top Plant Demand (scoped)
       prisma.vehicleRequest.groupBy({
         by: ["plantId"],
+        where: requestWhere,
         _count: { id: true },
         _sum: { requiredCbm: true },
         orderBy: {
@@ -143,8 +177,9 @@ export default async function DashboardPage() {
         },
         take: 5,
       }),
-      // Recent Dispatched Trips
+      // Recent Dispatched Trips (scoped)
       prisma.deliveryTrip.findMany({
+        where: tripWhere,
         take: 8,
         orderBy: { createdAt: "desc" },
         include: {

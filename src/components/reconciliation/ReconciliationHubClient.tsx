@@ -240,6 +240,14 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
     e.preventDefault();
     if (!finalizeModalTrip) return;
 
+    if (
+      finalizeModalTrip.status !== "RECONCILED" &&
+      !finalizeModalTrip.latestReconciliation
+    ) {
+      showToast("error", "Cannot finalize: Trip reconciliation must be performed first.");
+      return;
+    }
+
     setIsFinalizing(true);
     try {
       const res = await fetch("/api/reconciliation/finalize", {
@@ -523,7 +531,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                                 </button>
                               )}
 
-                              {!isFinalized && Boolean(t.latestReconciliation || t.status === "RECONCILED" || t.status === "COMPLETED") && (
+                              {!isFinalized && (t.status === "RECONCILED" || Boolean(t.latestReconciliation)) && (
                                 <button
                                   type="button"
                                   onClick={() => {

@@ -101,8 +101,8 @@ export const getSession = cache(async (options?: { skipDbSync?: boolean }): Prom
       mustChangePassword: liveUser.mustChangePassword === 1,
     };
   } catch (err) {
-    console.error("Database user sync fallback to token:", err);
-    return decoded;
+    console.error("Database user sync failed, rejecting session:", err);
+    return null;
   }
 });
 
@@ -120,6 +120,14 @@ export async function setSessionCookie(user: SessionUser) {
 
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
+  cookieStore.set("str_vms_session", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
   cookieStore.delete("str_vms_session");
 }
 
