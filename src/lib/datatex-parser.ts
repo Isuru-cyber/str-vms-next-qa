@@ -67,6 +67,19 @@ export class DatatexParser {
         };
       }
 
+      const MAX_ROWS = 5000;
+      if (rawGrid.length > MAX_ROWS) {
+        return {
+          success: false,
+          invoices: {},
+          gate_passes: {},
+          total_rows: rawGrid.length,
+          errors: [
+            `Spreadsheet contains too many rows (${rawGrid.length}). The maximum allowed limit is ${MAX_ROWS} rows.`,
+          ],
+        };
+      }
+
       return this.processGrid(rawGrid);
     } catch (e: any) {
       return {
@@ -101,7 +114,7 @@ export class DatatexParser {
       const tempMap: Record<string, number> = {};
 
       for (const [key, patterns] of Object.entries(requiredPatterns)) {
-        for (let c = 0; c < rowLower.length; c++) {
+        for (let c = 0; c < Math.min(rowLower.length, 60); c++) {
           const val = rowLower[c];
           if (patterns.some((p) => val.includes(p))) {
             tempMap[key] = c;

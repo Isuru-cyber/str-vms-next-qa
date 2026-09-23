@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   FileCheck2,
@@ -85,14 +85,23 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
   // Finalize Modal
   const [finalizeModalTrip, setFinalizeModalTrip] = useState<ReconciliationTrip | null>(null);
   const [finalizeNotes, setFinalizeNotes] = useState("");
+  const [finalizeConfirmed, setFinalizeConfirmed] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   const showToast = (type: "success" | "error", message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   };
 
   // Handle Excel Upload
@@ -240,6 +249,11 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
     e.preventDefault();
     if (!finalizeModalTrip) return;
 
+    if (!finalizeConfirmed) {
+      showToast("error", "Please confirm audit sign-off by ticking the confirmation checkbox.");
+      return;
+    }
+
     if (
       finalizeModalTrip.status !== "RECONCILED" &&
       !finalizeModalTrip.latestReconciliation
@@ -271,6 +285,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
 
       setFinalizeModalTrip(null);
       setFinalizeNotes("");
+      setFinalizeConfirmed(false);
       showToast("success", data.message || "Trip finalized successfully!");
     } catch (err: any) {
       showToast("error", err.message || "Network error.");
@@ -537,6 +552,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                                   onClick={() => {
                                     setFinalizeModalTrip(t);
                                     setFinalizeNotes("");
+                                    setFinalizeConfirmed(false);
                                   }}
                                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs cursor-pointer"
                                   title="Finalize trip into audited financial reports"
@@ -954,17 +970,32 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                 />
               </div>
 
+              <label className="flex items-start gap-2.5 p-3 bg-amber-50/80 border border-amber-200 rounded-xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={finalizeConfirmed}
+                  onChange={(e) => setFinalizeConfirmed(e.target.checked)}
+                  className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-amber-900 leading-tight">
+                  <strong>Permanent Audit Action:</strong> I confirm that physical cargo and Commercial Invoices have been fully reconciled. I understand that finalizing locks this trip into financial accounting and cannot be undone.
+                </span>
+              </label>
+
               <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setFinalizeModalTrip(null)}
+                  onClick={() => {
+                    setFinalizeModalTrip(null);
+                    setFinalizeConfirmed(false);
+                  }}
                   className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isFinalizing}
+                  disabled={isFinalizing || !finalizeConfirmed}
                   className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                 >
                   {isFinalizing ? "Finalizing..." : "Approve & Finalize"}

@@ -42,8 +42,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const todayStr = new Date().toISOString().split("T")[0];
-    const reqDateStr = new Date(requiredDate).toISOString().split("T")[0];
+    // Use Sri Lanka timezone (Asia/Colombo / UTC+05:30) for accurate local day & time comparisons
+    const slNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
+    const slYear = slNow.getFullYear();
+    const slMonth = String(slNow.getMonth() + 1).padStart(2, "0");
+    const slDay = String(slNow.getDate()).padStart(2, "0");
+    const todayStr = `${slYear}-${slMonth}-${slDay}`;
+
+    const parsedDate = new Date(requiredDate);
+    if (isNaN(parsedDate.getTime())) {
+      return NextResponse.json({ success: false, message: "Invalid required date format." }, { status: 400 });
+    }
+    const reqDYear = parsedDate.getFullYear();
+    const reqDMonth = String(parsedDate.getMonth() + 1).padStart(2, "0");
+    const reqDDay = String(parsedDate.getDate()).padStart(2, "0");
+    const reqDateStr = `${reqDYear}-${reqDMonth}-${reqDDay}`;
+
     if (reqDateStr < todayStr) {
       return NextResponse.json({ success: false, message: "Validation Error: Back-dates are not allowed. Please select today or a future date." }, { status: 400 });
     }
@@ -61,8 +75,7 @@ export async function POST(req: NextRequest) {
 
     // 1-Hour advance buffer check for same-day requests
     if (reqDateStr === todayStr) {
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const currentMinutes = slNow.getHours() * 60 + slNow.getMinutes();
       const targetMinutes = targetH * 60 + targetM;
       if (targetMinutes < currentMinutes + 60) {
         return NextResponse.json(
@@ -70,6 +83,14 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+    }
+
+    // M-08: Validate urgency enum and item description bounds
+    const ALLOWED_URGENCIES = ["Normal", "Urgent", "Critical"];
+    const sanitizedUrgency = urgency && ALLOWED_URGENCIES.includes(urgency) ? urgency : "Normal";
+    const sanitizedDescription = String(itemDescription).trim().slice(0, 1000);
+    if (!sanitizedDescription) {
+      return NextResponse.json({ success: false, message: "Item description cannot be empty." }, { status: 400 });
     }
 
     // Generate formatted Request Code and create request atomically within a single transaction
@@ -86,15 +107,15 @@ export async function POST(req: NextRequest) {
           vehicleTypeId: vehicleTypeId ? Number(vehicleTypeId) : null,
           fromLocationId: Number(fromLocationId),
           toLocationId: Number(toLocationId),
-          requiredDate: new Date(requiredDate),
+          requiredDate: parsedDate,
           requiredTime: String(requiredTime),
           requiredKg: requiredKg ? Number(requiredKg) : null,
           requiredCbm: requiredCbm ? Number(requiredCbm) : null,
           boxCount: boxCount ? Number(boxCount) : null,
           goodsReadyStatus: goodsReadyStatus ? String(goodsReadyStatus) : "Ready",
           invoiceNumbers: invoiceNumbers ? String(invoiceNumbers) : null,
-          urgency: urgency || "Normal",
-          itemDescription: String(itemDescription),
+          urgency: sanitizedUrgency,
+          itemDescription: sanitizedDescription,
           remarks: remarks ? String(remarks) : null,
           status: "SUBMITTED",
         },

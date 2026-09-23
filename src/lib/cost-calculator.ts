@@ -200,6 +200,29 @@ export class CostCalculator {
       };
     }
 
+    // M-10: Adjust rounding drift so that sum(allocated_cost) strictly equals totalTripCost
+    const requestIds = Object.keys(result).map(Number);
+    if (requestIds.length > 0 && totalTripCost > 0) {
+      let sumAllocated = 0;
+      let primaryId = requestIds[0];
+      let maxShare = -1;
+
+      for (const id of requestIds) {
+        sumAllocated += result[id].allocated_cost;
+        if (result[id].share_pct > maxShare) {
+          maxShare = result[id].share_pct;
+          primaryId = id;
+        }
+      }
+
+      const drift = Number((totalTripCost - sumAllocated).toFixed(2));
+      if (Math.abs(drift) > 0 && result[primaryId]) {
+        result[primaryId].allocated_cost = Number(
+          (result[primaryId].allocated_cost + drift).toFixed(2)
+        );
+      }
+    }
+
     return result;
   }
 
@@ -259,7 +282,8 @@ export class CostCalculator {
     const combinedCost = Number(actualCombinedCost) || 0;
     const reqCount = linkedRequests.length;
 
-    if (reqCount <= 1 || combinedCost <= 0) {
+    // M-11: If reqCount <= 1 it's not consolidated. If reqCount > 1, it IS consolidated even if combinedCost is 0.
+    if (reqCount <= 1) {
       return {
         standalone_total_cost: combinedCost,
         actual_combined_cost: combinedCost,

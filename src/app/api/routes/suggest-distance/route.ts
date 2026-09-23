@@ -15,7 +15,12 @@ export async function GET(req: NextRequest) {
     const locationId = Number(locationIdStr);
     const currentRouteId = currentRouteIdStr ? Number(currentRouteIdStr) : 0;
 
-    if (!originId || !locationId) {
+    if (
+      !Number.isInteger(originId) ||
+      originId <= 0 ||
+      !Number.isInteger(locationId) ||
+      locationId <= 0
+    ) {
       return NextResponse.json({ success: false, distance_km: null });
     }
 
@@ -57,10 +62,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 2. Second priority: any route where origin is originId and has locationId
+    // 2. Second priority: any route where origin is originId and has locationId (exclude directRoute if it had 0 km)
     const matchingRoute = await prisma.route.findFirst({
       where: {
         originLocationId: originId,
+        id: directRoute ? { not: directRoute.id } : undefined,
         active: 1,
         stops: {
           some: {
@@ -71,7 +77,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         stops: {
-          where: { locationId },
+          where: { locationId, cumulativeDistanceKm: { gt: 0 } },
         },
       },
     });

@@ -16,9 +16,22 @@ export async function POST(req: NextRequest) {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
 
-    if (isNaN(locationId) || isNaN(latitude) || isNaN(longitude)) {
+    if (
+      isNaN(locationId) ||
+      !Number.isInteger(locationId) ||
+      locationId <= 0 ||
+      isNaN(latitude) ||
+      isNaN(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
       return NextResponse.json(
-        { success: false, message: "Valid location ID, latitude, and longitude are required." },
+        {
+          success: false,
+          message: "Valid location ID and geographic coordinates (latitude ±90, longitude ±180) are required.",
+        },
         { status: 400 }
       );
     }
@@ -42,7 +55,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Coordinates for ${updated.locationName} saved successfully.`,
-      location: updated,
+      location: {
+        id: updated.id,
+        locationName: updated.locationName,
+        latitude: updated.latitude,
+        longitude: updated.longitude,
+      },
     });
   } catch (err: any) {
     console.error("Update coordinates error:", err);

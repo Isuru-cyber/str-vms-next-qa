@@ -431,6 +431,7 @@ model TripReconciliation {
   trip DeliveryTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([tripId])
+  @@index([tripId, matchStatus])
   @@index([gatePassNo])
   @@map("trip_reconciliations")
 }
@@ -546,5 +547,7 @@ model AuditLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([module, action, createdAt])
+  @@index([createdAt])
   @@map("audit_logs")
 }

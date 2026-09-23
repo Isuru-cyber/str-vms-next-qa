@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorizeApi } from "@/lib/permissions";
 
+function isValidNIC(nic: string): boolean {
+  return /^([0-9]{9}[vVxX]|[0-9]{12})$/.test(nic.trim());
+}
+
+function isValidMobile(mobile: string): boolean {
+  const cleaned = mobile.replace(/[\s\-]/g, "");
+  return /^(\+94|0)[0-9]{9}$/.test(cleaned);
+}
+
+function isValidLicenseNumber(license: string): boolean {
+  if (!license || !license.trim()) return true;
+  return /^[A-Za-z0-9\-]{5,30}$/.test(license.trim());
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await authorizeApi({ action: "manage_fleet" });
@@ -18,6 +32,27 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanNic = String(nic).trim().toUpperCase();
+    if (!isValidNIC(cleanNic)) {
+      return NextResponse.json(
+        { message: "Invalid Sri Lankan NIC format. Must be 9 digits followed by V/X or 12 digits." },
+        { status: 400 }
+      );
+    }
+
+    const cleanMobile = String(mobile).trim().replace(/[\s\-]/g, "");
+    if (!isValidMobile(cleanMobile)) {
+      return NextResponse.json(
+        { message: "Invalid mobile number format. Must be a valid Sri Lankan mobile number (e.g., 07XXXXXXXX)." },
+        { status: 400 }
+      );
+    }
+
+    if (licenseNumber && !isValidLicenseNumber(String(licenseNumber))) {
+      return NextResponse.json(
+        { message: "Invalid license number format. Must be 5 to 30 alphanumeric characters." },
+        { status: 400 }
+      );
+    }
 
     // H-24: Validate NIC uniqueness
     const existingNic = await prisma.driver.findUnique({
@@ -159,13 +194,52 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    let cleanNic: string | undefined = undefined;
+    if (nic !== undefined) {
+      cleanNic = String(nic).trim().toUpperCase();
+      if (!isValidNIC(cleanNic)) {
+        return NextResponse.json(
+          { message: "Invalid Sri Lankan NIC format. Must be 9 digits followed by V/X or 12 digits." },
+          { status: 400 }
+        );
+      }
+      if (cleanNic !== existingDriver.nic) {
+        const dup = await prisma.driver.findUnique({ where: { nic: cleanNic } });
+        if (dup) {
+          return NextResponse.json({ message: `Driver with NIC ${cleanNic} already exists.` }, { status: 409 });
+        }
+      }
+    }
+
+    let cleanMobile: string | undefined = undefined;
+    if (mobile !== undefined) {
+      cleanMobile = String(mobile).trim().replace(/[\s\-]/g, "");
+      if (!isValidMobile(cleanMobile)) {
+        return NextResponse.json(
+          { message: "Invalid mobile number format. Must be a valid Sri Lankan mobile number (e.g., 07XXXXXXXX)." },
+          { status: 400 }
+        );
+      }
+    }
+
+    let cleanLicense: string | undefined = undefined;
+    if (licenseNumber !== undefined) {
+      cleanLicense = licenseNumber ? String(licenseNumber).trim() : "";
+      if (cleanLicense && !isValidLicenseNumber(cleanLicense)) {
+        return NextResponse.json(
+          { message: "Invalid license number format. Must be 5 to 30 alphanumeric characters." },
+          { status: 400 }
+        );
+      }
+    }
+
     const updated = await prisma.driver.update({
       where: { id: driverId },
       data: {
         name: name ? String(name).trim() : undefined,
-        nic: nic ? String(nic).trim().toUpperCase() : undefined,
-        mobile: mobile ? String(mobile).trim() : undefined,
-        licenseNumber: licenseNumber !== undefined ? (licenseNumber ? String(licenseNumber).trim() : "") : undefined,
+        nic: cleanNic,
+        mobile: cleanMobile,
+        licenseNumber: cleanLicense,
         licenseExpiry: parsedExpiry,
         linkedVehicleId: vehId,
         linkedPlantId: plantId,

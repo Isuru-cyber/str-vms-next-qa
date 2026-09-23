@@ -106,9 +106,24 @@ export function CombineWorkbenchClient({
 
   // In-app Toast & Confirmation Modal
   const [toast, setToast] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveSuccessTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const copySubjectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const copyBodyTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current);
+      if (copySubjectTimerRef.current) clearTimeout(copySubjectTimerRef.current);
+      if (copyBodyTimerRef.current) clearTimeout(copyBodyTimerRef.current);
+    };
+  }, []);
+
   const showToast = (type: "success" | "error" | "warning", message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ type, message });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   };
 
   const [confirmModal, setConfirmModal] = useState<{
@@ -696,6 +711,11 @@ export function CombineWorkbenchClient({
 
   // Reverse Trip (Rollback allocation, revert requests to SUBMITTED, release fleet)
   const handleReverseTrip = async () => {
+    if (hasUnsavedChanges) {
+      showToast("warning", "You have unsaved modifications in the workbench. Please save or revert them before reversing the trip.");
+      return;
+    }
+
     const msg =
       "⚠️ WARNING: Are you sure you want to REVERSE and CANCEL this Trip?\n\n" +
       "• All included requests will return to 'SUBMITTED' status.\n" +
@@ -735,8 +755,9 @@ export function CombineWorkbenchClient({
   };
 
   const showNotification = () => {
+    if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current);
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    saveSuccessTimerRef.current = setTimeout(() => setSaveSuccess(false), 2500);
   };
 
   // Fetch configured mail templates from Settings API
@@ -807,9 +828,13 @@ export function CombineWorkbenchClient({
       vehicle_number: trip?.vehicle?.vehicleNumber || "Unassigned",
       vehicle_type: trip?.vehicle?.vehicleType || "Standard Fleet",
       driver_name: trip?.driver?.name || "Assigned Driver",
-      driver_nic: trip?.driver?.nic || "N/A",
+      driver_nic: trip?.driver?.nic
+        ? `${trip.driver.nic.slice(0, 3)}*****${trip.driver.nic.slice(-2)} (Masked for Privacy)`
+        : "N/A",
       driver_mobile: trip?.driver?.mobile || "N/A",
-      driver_license: trip?.driver?.licenseNumber || trip?.driver?.license || "N/A",
+      driver_license: (trip?.driver?.licenseNumber || trip?.driver?.license)
+        ? `*****${String(trip?.driver?.licenseNumber || trip?.driver?.license).slice(-3)}`
+        : "N/A",
       total_cbm: totalCbm.toFixed(2),
       total_kg: Math.round(totalKg).toLocaleString(),
       requests_breakdown: breakdownText || "No requests linked yet",
@@ -854,7 +879,8 @@ export function CombineWorkbenchClient({
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(draftSubject);
       setCopySubjectSuccess(true);
-      setTimeout(() => setCopySubjectSuccess(false), 2000);
+      if (copySubjectTimerRef.current) clearTimeout(copySubjectTimerRef.current);
+      copySubjectTimerRef.current = setTimeout(() => setCopySubjectSuccess(false), 2000);
     }
   };
 
@@ -872,17 +898,20 @@ export function CombineWorkbenchClient({
         ])
         .then(() => {
           setCopyBodySuccess(true);
-          setTimeout(() => setCopyBodySuccess(false), 2000);
+          if (copyBodyTimerRef.current) clearTimeout(copyBodyTimerRef.current);
+          copyBodyTimerRef.current = setTimeout(() => setCopyBodySuccess(false), 2000);
         })
         .catch(() => {
           navigator.clipboard.writeText(draftBody);
           setCopyBodySuccess(true);
-          setTimeout(() => setCopyBodySuccess(false), 2000);
+          if (copyBodyTimerRef.current) clearTimeout(copyBodyTimerRef.current);
+          copyBodyTimerRef.current = setTimeout(() => setCopyBodySuccess(false), 2000);
         });
     } else if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(draftBody);
       setCopyBodySuccess(true);
-      setTimeout(() => setCopyBodySuccess(false), 2000);
+      if (copyBodyTimerRef.current) clearTimeout(copyBodyTimerRef.current);
+      copyBodyTimerRef.current = setTimeout(() => setCopyBodySuccess(false), 2000);
     }
   };
 
