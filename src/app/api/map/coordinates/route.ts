@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error("Update coordinates error:", err);
     return NextResponse.json(
-      { success: false, message: err?.message || "Operation failed." },
+      { success: false, message: "An internal error occurred while saving coordinates." },
       { status: 500 }
     );
   }

@@ -387,7 +387,6 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                   ) : (
                     trips.map((t) => {
                       const isFinalized = ["FINALIZED", "CLOSED"].includes(t.status);
-                      const isCompleted = t.status === "COMPLETED";
                       const isReconciled = t.status === "RECONCILED";
                       const rec = t.latestReconciliation;
 

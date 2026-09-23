@@ -103,6 +103,7 @@ export default async function DashboardPage() {
       pastSevenDaysTrips,
       topPlantsRaw,
       recentDispatched,
+      allPlantsInfo,
     ] = await Promise.all([
       // Diesel Rate: try current month first, then latest
       prisma.monthlyFuelRate.findFirst({
@@ -189,6 +190,10 @@ export default async function DashboardPage() {
           _count: { select: { tripRequests: true } },
         },
       }),
+      // Plants Info (colocated for top plants metrics)
+      prisma.plant.findMany({
+        select: { id: true, code: true, name: true },
+      }),
     ]);
 
     if (fuelRateRecord) {
@@ -266,14 +271,9 @@ export default async function DashboardPage() {
       }
     });
 
-    // Highest Demand Plants Details
-    const plantIds = (topPlantsRaw as any[]).map((p: any) => p.plantId);
-    const plantsInfo = await prisma.plant.findMany({
-      where: { id: { in: plantIds } },
-      select: { id: true, code: true, name: true },
-    });
+    // Highest Demand Plants Details (using colocated allPlantsInfo)
     highestDemandPlants = (topPlantsRaw as any[]).map((p: any) => {
-      const pl = (plantsInfo as any[]).find((pi: any) => pi.id === p.plantId);
+      const pl = (allPlantsInfo as any[]).find((pi: any) => pi.id === p.plantId);
       return {
         plantName: pl?.code || pl?.name || `Plant ${p.plantId}`,
         reqCount: p._count.id,

@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: false, distance_km: null });
   } catch (error: any) {
-    return NextResponse.json({ success: false, distance_km: null, error: error.message }, { status: 500 });
+    console.error("Suggest distance error:", error);
+    return NextResponse.json({ success: false, distance_km: null, error: "An internal error occurred." }, { status: 500 });
   }
 }

@@ -36,6 +36,7 @@ export default async function FleetAvailabilityPage({
   // Validate bounds (year between 2000 and 2100, month between 1 and 12)
   const safeYear = isNaN(parsedYear) || parsedYear < 2000 || parsedYear > 2100 ? now.getFullYear() : parsedYear;
   const safeMonth = isNaN(parsedMonth) || parsedMonth < 1 || parsedMonth > 12 ? now.getMonth() + 1 : parsedMonth;
+  const safeCurrentMonth = `${safeYear}-${String(safeMonth).padStart(2, "0")}`;
 
   const startDate = new Date(safeYear, safeMonth - 1, 1);
   const endDate = new Date(safeYear, safeMonth, 0, 23, 59, 59);
@@ -135,7 +136,7 @@ export default async function FleetAvailabilityPage({
   return (
     <FleetAvailabilityView
       initialVehicles={vehicleItems}
-      selectedMonth={currentMonth}
+      selectedMonth={safeCurrentMonth}
     />
   );
 }

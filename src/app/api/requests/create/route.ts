@@ -144,6 +144,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, request: newRequest });
   } catch (err: any) {
     console.error("Create request error:", err);
-    return NextResponse.json({ success: false, message: err?.message || "Failed to create request." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "An internal error occurred while creating request." }, { status: 500 });
   }
 }

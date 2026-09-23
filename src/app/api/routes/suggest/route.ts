@@ -242,6 +242,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([]);
   } catch (error: any) {
     console.error("Error suggesting routes:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "An internal error occurred while calculating route suggestions." }, { status: 500 });
   }
 }

@@ -1,16 +1,46 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+function isSessionValid(token: string | undefined): boolean {
+  if (!token) return false;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (!payload || !payload.id) return false;
+    if (payload.exp && typeof payload.exp === "number") {
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      if (payload.exp < nowInSeconds) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("str_vms_session")?.value;
+  const valid = isSessionValid(token);
 
-  // 1. If user is on the login page and already has a session token, redirect to dashboard
+  // 1. If user is on the login page and has a valid session token, redirect to dashboard
   if (pathname === "/login") {
-    if (token) {
+    if (valid) {
       return NextResponse.redirect(new URL("/", request.url));
     }
     const response = NextResponse.next();
+    if (token && !valid) {
+      response.cookies.delete("str_vms_session");
+    }
     addSecurityHeaders(response);
     return response;
   }
@@ -20,11 +50,15 @@ export function middleware(request: NextRequest) {
     const isPublicApi =
       pathname.startsWith("/api/auth/login") || pathname.startsWith("/api/auth/logout");
 
-    if (!isPublicApi && !token) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized. Session required." },
+    if (!isPublicApi && !valid) {
+      const response = NextResponse.json(
+        { success: false, message: "Unauthorized. Valid session required." },
         { status: 401 }
       );
+      if (token && !valid) {
+        response.cookies.delete("str_vms_session");
+      }
+      return response;
     }
 
     const response = NextResponse.next();
@@ -33,11 +67,15 @@ export function middleware(request: NextRequest) {
   }
 
   // 3. Protect all other application dashboard routes
-  if (!token) {
+  if (!valid) {
     const loginUrl = new URL("/login", request.url);
     const safeFrom = pathname.startsWith("/") && !pathname.startsWith("//") ? pathname : "/";
     loginUrl.searchParams.set("from", safeFrom);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    if (token && !valid) {
+      response.cookies.delete("str_vms_session");
+    }
+    return response;
   }
 
   const response = NextResponse.next();

@@ -45,7 +45,7 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
 
   const completedTrips = trips.filter(
     (t) =>
-      t.status === "GATE_PASS_ISSUED" ||
+      ["GATE_PASS_ISSUED", "DISPATCHED", "IN_TRANSIT", "COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(t.status) ||
       (t.gatePasses && t.gatePasses.length > 0)
   );
 

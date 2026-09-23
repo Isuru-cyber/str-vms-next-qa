@@ -20,9 +20,10 @@ async function internalGenerateNextTripNo(tx: any): Promise<string> {
 
   let nextNum = maxNum + 1;
   let attempts = 0;
-  while (attempts < 1000) {
+  while (attempts < 50) {
     attempts++;
-    const candidate = `TRIP-${String(nextNum).padStart(4, "0")}`;
+    const padLength = Math.max(4, String(nextNum).length);
+    const candidate = `TRIP-${String(nextNum).padStart(padLength, "0")}`;
     const exists = await tx.deliveryTrip.findUnique({
       where: { tripNo: candidate },
       select: { id: true },
@@ -32,7 +33,7 @@ async function internalGenerateNextTripNo(tx: any): Promise<string> {
     }
     nextNum++;
   }
-  throw new Error("Failed to generate unique trip number after 1000 attempts.");
+  throw new Error("Failed to generate unique trip number after 50 attempts.");
 }
 
 export async function generateNextTripNo(client?: any): Promise<string> {
@@ -68,9 +69,10 @@ async function internalGenerateNextRequestCode(tx: any): Promise<string> {
 
   let nextNum = maxNum + 1;
   let attempts = 0;
-  while (attempts < 1000) {
+  while (attempts < 50) {
     attempts++;
-    const candidate = `${prefix}${String(nextNum).padStart(4, "0")}`;
+    const padLength = Math.max(4, String(nextNum).length);
+    const candidate = `${prefix}${String(nextNum).padStart(padLength, "0")}`;
     const exists = await tx.vehicleRequest.findUnique({
       where: { requestCode: candidate },
       select: { id: true },
@@ -80,7 +82,7 @@ async function internalGenerateNextRequestCode(tx: any): Promise<string> {
     }
     nextNum++;
   }
-  throw new Error("Failed to generate unique request code after 1000 attempts.");
+  throw new Error("Failed to generate unique request code after 50 attempts.");
 }
 
 export async function generateNextRequestCode(client?: any): Promise<string> {

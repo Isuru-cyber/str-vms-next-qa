@@ -122,6 +122,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, trip });
   } catch (err: any) {
     console.error("Single allocation error:", err);
-    return NextResponse.json({ success: false, message: err?.message || "Failed to allocate request." }, { status: 500 });
+    return NextResponse.json({ success: false, message: "An internal error occurred while allocating request." }, { status: 500 });
   }
 }

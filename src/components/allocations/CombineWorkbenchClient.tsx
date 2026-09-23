@@ -156,6 +156,54 @@ export function CombineWorkbenchClient({
   const isDispatched = ["DISPATCHED", "IN_TRANSIT", "GATE_PASS_ISSUED"].includes(trip?.status);
   const isLocked = isCompleted || isDispatched || trip?.status === "READY_FOR_LOADING";
 
+  const getLifecycleStatusLabel = (status: string | undefined) => {
+    switch (status) {
+      case "CLOSED":
+        return {
+          label: "Trip Closed (Archived)",
+          desc: "All delivery POD receipts confirmed and trip records closed.",
+          color: "bg-purple-50 text-purple-600 border-purple-200",
+        };
+      case "FINALIZED":
+        return {
+          label: "Trip Finalized (Audited)",
+          desc: "Permanently locked into finance & costing accounting reports.",
+          color: "bg-emerald-50 text-emerald-600 border-emerald-200",
+        };
+      case "RECONCILED":
+        return {
+          label: "Trip Reconciled",
+          desc: "Cargo & invoices matched with dispatch actuals. Awaiting final audit approval.",
+          color: "bg-teal-50 text-teal-600 border-teal-200",
+        };
+      case "COMPLETED":
+        return {
+          label: "Delivery Completed",
+          desc: "Goods delivered. Pending Commercial Invoice reconciliation.",
+          color: "bg-emerald-50 text-emerald-600 border-emerald-200",
+        };
+      case "IN_TRANSIT":
+      case "DISPATCHED":
+        return {
+          label: "Trip Dispatched",
+          desc: "This trip has been dispatched to the loading bay. Manifest and cargo are locked against alterations.",
+          color: "bg-blue-50 text-blue-600 border-blue-200",
+        };
+      case "READY_FOR_LOADING":
+        return {
+          label: "Ready for Loading",
+          desc: "This allocation is staged for physical loading. Manifest is locked against alterations.",
+          color: "bg-amber-50 text-amber-600 border-amber-200",
+        };
+      default:
+        return {
+          label: "Active Allocation",
+          desc: "Workbench allocation in progress.",
+          color: "bg-slate-50 text-slate-600 border-slate-200",
+        };
+    }
+  };
+
   // Capacity Limits
   const maxPayloadKg = Number(trip?.vehicle?.maxPayloadKg) > 0 ? Number(trip.vehicle.maxPayloadKg) : 1000;
   const maxVolumeCbm = Number(trip?.vehicle?.maxVolumeCbm) > 0 ? Number(trip.vehicle.maxVolumeCbm) : 20;
@@ -1340,19 +1388,15 @@ export function CombineWorkbenchClient({
         {isLocked ? (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 h-[520px] flex flex-col items-center justify-center text-center">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 border shadow-xs ${
-              isCompleted ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-blue-50 text-blue-600 border-blue-100"
+              getLifecycleStatusLabel(trip?.status).color
             }`}>
               {isCompleted ? <CheckCircle2 className="w-8 h-8" /> : <Truck className="w-8 h-8" />}
             </div>
             <h3 className="text-base font-bold text-slate-800 mb-1">
-              {isCompleted ? "Trip Finalized & Completed" : isDispatched ? "Trip Dispatched" : "Ready for Loading"}
+              {getLifecycleStatusLabel(trip?.status).label}
             </h3>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-              {isCompleted
-                ? "This allocation is marked as COMPLETED. No additional requests can be added, removed, or transferred."
-                : isDispatched
-                ? "This trip has been dispatched to the loading bay. Manifest and cargo are locked against alterations."
-                : "This allocation is staged for physical loading. Manifest is locked against alterations."}
+              {getLifecycleStatusLabel(trip?.status).desc}
             </p>
           </div>
         ) : (
@@ -2096,7 +2140,7 @@ export function CombineWorkbenchClient({
                       : "text-blue-800 bg-blue-50 border-blue-300"
                   }`}>
                     {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
-                    <span>{isCompleted ? "Trip Completed (Locked)" : isDispatched ? "Dispatched (Locked)" : "Loading Bay (Locked)"}</span>
+                    <span>{getLifecycleStatusLabel(trip?.status).label} (Locked)</span>
                   </span>
                 ) : (
                   <button
