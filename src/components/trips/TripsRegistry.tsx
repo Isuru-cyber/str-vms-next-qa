@@ -543,16 +543,16 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
               <tr>
-                <th className="py-2.5 px-3">Trip Number</th>
-                <th className="py-2.5 px-3">Date</th>
-                <th className="py-2.5 px-3 text-center">Status</th>
-                <th className="py-2.5 px-3">Vehicle</th>
-                <th className="py-2.5 px-3">Driver</th>
-                <th className="py-2.5 px-3">Route Corridor</th>
-                <th className="py-2.5 px-3 text-center">Requests</th>
-                <th className="py-2.5 px-3 text-right">Planned (KM)</th>
-                <th className="py-2.5 px-3 text-right">Actual (KM)</th>
-                <th className="py-2.5 px-3 text-center">Action</th>
+                <th className="py-2.5 px-3 w-36 whitespace-nowrap">Trip Number</th>
+                <th className="py-2.5 px-3 w-24 whitespace-nowrap">Date</th>
+                <th className="py-2.5 px-3 w-28 text-center whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-3 w-36 whitespace-nowrap">Vehicle</th>
+                <th className="py-2.5 px-3 w-40 whitespace-nowrap">Driver</th>
+                <th className="py-2.5 px-3 min-w-[240px]">Route Corridor</th>
+                <th className="py-2.5 px-3 w-28 text-center whitespace-nowrap">Requests</th>
+                <th className="py-2.5 px-3 w-28 text-right whitespace-nowrap">Planned (KM)</th>
+                <th className="py-2.5 px-3 w-32 text-right whitespace-nowrap">Actual (KM)</th>
+                <th className="py-2.5 px-3 w-20 text-center whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -577,7 +577,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                   return (
                     <tr key={t.id} className="hover:bg-gray-50/80 transition-colors">
                       {/* Trip Number */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-2.5 px-3 w-36 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg tracking-tight inline-block">
                             {t.tripNo}
@@ -595,17 +595,17 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                       </td>
 
                       {/* Date (Separate dedicated column) */}
-                      <td className="py-2.5 px-3 text-xs text-gray-600 font-medium tabular-nums whitespace-nowrap">
+                      <td className="py-2.5 px-3 w-24 text-xs text-gray-600 font-medium tabular-nums whitespace-nowrap">
                         {new Date(t.createdAt).toLocaleDateString("en-GB")}
                       </td>
 
                       {/* Status */}
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                      <td className="py-2.5 px-3 w-28 text-center whitespace-nowrap">
                         <StatusBadge status={t.status} />
                       </td>
 
                       {/* Vehicle */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-2.5 px-3 w-36 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 font-bold text-gray-900 text-xs">
                           <Truck className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                           <span>{t.vehicle?.vehicleNumber || "Unassigned"}</span>
@@ -618,7 +618,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                       </td>
 
                       {/* Driver */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-2.5 px-3 w-40 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 text-gray-800 text-xs">
                           <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                           <span className="font-medium">{t.driver?.name || "Unassigned"}</span>
@@ -630,8 +630,8 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                         </div>
                       </td>
 
-                      {/* Route Corridor (Extended width) */}
-                      <td className="py-2.5 px-3 min-w-[200px] max-w-[340px] lg:max-w-[420px]">
+                      {/* Route Corridor (Expands to absorb spare table space) */}
+                      <td className="py-2.5 px-3 min-w-[240px]">
                         <span
                           className="truncate font-medium text-gray-800 text-xs block"
                           title={t.route?.routeName || "Consolidated Multi-Stop Corridor"}

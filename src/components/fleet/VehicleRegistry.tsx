@@ -247,99 +247,174 @@ export function VehicleRegistry({
       {/* Main Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex-1 flex flex-col min-h-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
               <tr>
-                <th className="py-3 px-4">Vehicle Plate</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Operation</th>
-                <th className="py-3 px-4">Base Location</th>
-                <th className="py-3 px-4">Capacity (KG / CBM)</th>
-                <th className="py-3 px-4">Payment Basis & Rates</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Vehicle Plate</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Type</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Operation</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Base Location</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Capacity</th>
+                <th className="py-2.5 px-3 text-center whitespace-nowrap">Payment Basis</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Monthly Rent</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Free KM Limit</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Extra KM Rate</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Running Cost/KM</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Profit/KM</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Fuel Economy</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Daily Fixed</th>
+                <th className="py-2.5 px-3 text-center whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-3 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredVehicles.map((v) => {
-                const opName = v.operationCategory?.name || (v.operationCategoryId === 1 ? 'Shuttle Operation' : v.operationCategoryId === 2 ? 'Finished Goods & Other' : '-');
-                const locName = v.defaultLocation?.locationName || '-';
-                const isFixed = v.paymentBasis === 'FIXED';
+              {filteredVehicles.length === 0 ? (
+                <tr>
+                  <td colSpan={15} className="py-8 text-center text-gray-400">
+                    No vehicles found matching criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredVehicles.map((v) => {
+                  const opName = v.operationCategory?.name || (v.operationCategoryId === 1 ? 'Shuttle Operation' : v.operationCategoryId === 2 ? 'Finished Goods & Other' : '-');
+                  const locName = v.defaultLocation?.locationName || '-';
+                  const isFixed = v.paymentBasis === 'FIXED';
 
-                return (
-                  <tr key={v.id} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-gray-900 tracking-tight whitespace-nowrap">
-                      {v.vehicleNumber}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-gray-800 whitespace-nowrap">
-                      {v.vehicleType}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
-                        {opName}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-700 whitespace-nowrap">
-                      {locName}
-                    </td>
-                    <td className="py-3.5 px-4 tabular-nums text-gray-700 whitespace-nowrap">
-                      <span className="font-semibold">{v.maxPayloadKg ? Number(v.maxPayloadKg).toFixed(0) : '0'} kg</span>
-                      <span className="text-gray-400 mx-1">/</span>
-                      <span className="text-gray-600">{v.maxVolumeCbm ? Number(v.maxVolumeCbm).toFixed(1) : '0'} cbm</span>
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {isFixed ? (
-                        <div className="space-y-0.5">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
-                            FIXED CONTRACT
+                  return (
+                    <tr key={v.id} className="hover:bg-gray-50/70 transition-colors">
+                      {/* Vehicle Plate */}
+                      <td className="py-2.5 px-3 font-bold text-gray-900 tracking-tight whitespace-nowrap">
+                        {v.vehicleNumber}
+                      </td>
+
+                      {/* Type */}
+                      <td className="py-2.5 px-3 font-semibold text-gray-800 whitespace-nowrap">
+                        {v.vehicleType}
+                      </td>
+
+                      {/* Operation */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                          {opName}
+                        </span>
+                      </td>
+
+                      {/* Base Location */}
+                      <td className="py-2.5 px-3 text-gray-700 whitespace-nowrap">
+                        {locName}
+                      </td>
+
+                      {/* Capacity */}
+                      <td className="py-2.5 px-3 tabular-nums text-gray-700 whitespace-nowrap">
+                        <span className="font-semibold">{v.maxPayloadKg ? Number(v.maxPayloadKg).toFixed(0) : '0'} kg</span>
+                        <span className="text-gray-400 mx-1">/</span>
+                        <span className="text-gray-600">{v.maxVolumeCbm ? Number(v.maxVolumeCbm).toFixed(1) : '0'} cbm</span>
+                      </td>
+
+                      {/* Payment Basis */}
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          isFixed ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {isFixed ? 'FIXED CONTRACT' : 'KM-BASED'}
+                        </span>
+                      </td>
+
+                      {/* Monthly Rent */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap">
+                        {isFixed ? (
+                          <span className="font-bold text-purple-900 text-xs">
+                            Rs. {Number(v.monthlyFixedRate || 0).toLocaleString()}
                           </span>
-                          <div className="text-[11px] text-gray-700 font-medium">
-                            Rent: <strong className="text-purple-900">Rs. {Number(v.monthlyFixedRate || 0).toLocaleString()}</strong>
-                          </div>
-                          <div className="text-[10px] text-gray-500">
-                            Free: {Number(v.monthlyKmLimit || 0).toLocaleString()} km (+ Rs. {v.extraKmRate}/km)
-                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Free KM Limit */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-gray-700 font-medium">
+                        {isFixed && Number(v.monthlyKmLimit) > 0 ? (
+                          `${Number(v.monthlyKmLimit).toLocaleString()} km`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Extra KM Rate */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-gray-700 font-medium">
+                        {isFixed && Number(v.extraKmRate) > 0 ? (
+                          `Rs. ${Number(v.extraKmRate).toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Running Cost / KM */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-gray-700 font-medium">
+                        {!isFixed && Number(v.runningCostPerKm) > 0 ? (
+                          `Rs. ${Number(v.runningCostPerKm).toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Profit / KM */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-gray-700 font-medium">
+                        {!isFixed && Number(v.profitPerKm) > 0 ? (
+                          `Rs. ${Number(v.profitPerKm).toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Fuel Economy */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-gray-700 font-medium">
+                        {Number(v.fuelConsumptionKml) > 0 ? (
+                          `${Number(v.fuelConsumptionKml).toFixed(1)} km/L`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Daily Fixed Cost */}
+                      <td className="py-2.5 px-3 text-right tabular-nums whitespace-nowrap text-gray-700 font-medium">
+                        {!isFixed && Number(v.fixedCostPerDay) > 0 ? (
+                          `Rs. ${Number(v.fixedCostPerDay).toFixed(2)}`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                        <StatusBadge status={v.status} />
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(v)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                            title="Edit Vehicle"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(v.id)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                            title="Delete Vehicle"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      ) : (
-                        <div className="space-y-0.5">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
-                            KM-BASED
-                          </span>
-                          <div className="text-[11px] text-gray-700">
-                            Run: <strong>Rs. {v.runningCostPerKm}</strong> | Profit: <strong>Rs. {v.profitPerKm}</strong>
-                          </div>
-                          <div className="text-[10px] text-gray-500">
-                            Eff: {v.fuelConsumptionKml} km/L | Fixed: Rs. {v.fixedCostPerDay}/day
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <StatusBadge status={v.status} />
-                    </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(v)}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
-                          title="Edit Vehicle"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(v.id)}
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                          title="Delete Vehicle"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
