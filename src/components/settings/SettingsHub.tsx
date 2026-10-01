@@ -554,9 +554,9 @@ export function SettingsHub({
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] scrollbar-thin">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
                 <tr>
                   <th className="py-3 px-4">User Code</th>
                   <th className="py-3 px-4">Full Name</th>
@@ -692,9 +692,9 @@ export function SettingsHub({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] scrollbar-thin">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
                 <tr>
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">User</th>
@@ -878,19 +878,33 @@ export function SettingsHub({
               </div>
               <div className="p-4 bg-white rounded-xl border border-gray-200 text-xs text-gray-800 whitespace-pre-wrap font-sans leading-relaxed shadow-2xs">
                 <div className="border-b border-gray-100 pb-2 mb-3">
-                  <strong>Subject:</strong> {tempSubject.replace('{trip_no}', 'TRP-2026-0042').replace('{vehicle_number}', 'LK-6471').replace('{route_name}', 'Main Export Corridor')}
+                  <strong>Subject:</strong> {tempSubject
+                    .replace(/\{trip_no\}/gi, 'TRP-2026-0042')
+                    .replace(/\{vehicle_number\}/gi, 'LK-6471')
+                    .replace(/\{route_name\}/gi, 'Main Export Corridor')
+                    .replace(/\{request_code\}/gi, 'REQ-2026-0001')
+                    .replace(/\{plant_name\}/gi, 'STR 1 - Biyagama')}
                 </div>
                 {tempBody
-                  .replace('{trip_no}', 'TRP-2026-0042')
-                  .replace('{vehicle_number}', 'LK-6471')
-                  .replace('{vehicle_type}', '14.5ft Covered Box')
-                  .replace('{driver_name}', 'Sunil Perera')
-                  .replace('{driver_mobile}', '077-1234567')
-                  .replace('{route_name}', 'STR 1 - BIYAGAMA -> MAS Thulhiriya')
-                  .replace('{planned_km}', '65.4')
-                  .replace('{allocation_date}', '10 Sep 2026')
-                  .replace('{request_code}', 'REQ-2026-0001')
-                  .replace('{plant_name}', 'STR 1 - Biyagama')}
+                  .replace(/\{trip_no\}/gi, 'TRP-2026-0042')
+                  .replace(/\{vehicle_number\}/gi, 'LK-6471')
+                  .replace(/\{vehicle_type\}/gi, '14.5ft Covered Box')
+                  .replace(/\{driver_name\}/gi, 'Sunil Perera')
+                  .replace(/\{driver_nic\}/gi, '198512345678')
+                  .replace(/\{driver_mobile\}/gi, '077-1234567')
+                  .replace(/\{driver_license\}/gi, 'B-3498214')
+                  .replace(/\{route_name\}/gi, 'STR 1 - BIYAGAMA -> MAS Thulhiriya')
+                  .replace(/\{planned_km\}/gi, '65.4')
+                  .replace(/\{allocation_date\}/gi, '10 Sep 2026')
+                  .replace(/\{request_code\}/gi, 'REQ-2026-0001')
+                  .replace(/\{plant_name\}/gi, 'STR 1 - Biyagama')
+                  .replace(/\{from_location\}/gi, 'Plant STR 1')
+                  .replace(/\{to_location\}/gi, 'MAS Thulhiriya')
+                  .replace(/\{required_date\}/gi, '10 Sep 2026')
+                  .replace(/\{required_time\}/gi, '08:30 AM')
+                  .replace(/\{total_kg\}/gi, '2,450')
+                  .replace(/\{total_cbm\}/gi, '18.50')
+                  .replace(/\{requests_breakdown\}/gi, '• REQ-2026-0001 (500 KG / 4.2 CBM)\n• REQ-2026-0002 (1,950 KG / 14.3 CBM)')}
               </div>
             </div>
           </div>

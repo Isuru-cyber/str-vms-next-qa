@@ -369,9 +369,9 @@ export const PodManagerClient: React.FC<PodManagerClientProps> = ({
   };
 
   return (
-    <div className="space-y-3 w-full max-w-[1600px] mx-auto pb-16 px-2 sm:px-4">
+    <div className="space-y-2.5 w-full min-w-0 flex flex-col min-h-0">
       {/* Top Header - Compact */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 shrink-0">
         <div className="flex items-center gap-2">
           <CheckSquare className="w-5 h-5 text-indigo-600" />
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">
@@ -447,7 +447,7 @@ export const PodManagerClient: React.FC<PodManagerClientProps> = ({
       )}
 
       {/* 4 Executive KPI Cards (~90px height) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
         {/* Card 1: Total Invoices */}
         <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between h-[90px]">
           <div className="flex items-center justify-between">
@@ -506,7 +506,7 @@ export const PodManagerClient: React.FC<PodManagerClientProps> = ({
       </div>
 
       {/* Filter & Search Bar - Single Line */}
-      <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs flex flex-wrap lg:flex-nowrap items-center justify-between gap-2">
+      <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs flex flex-wrap lg:flex-nowrap items-center justify-between gap-2 shrink-0">
         {/* Left: Status Filter Pills */}
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -639,7 +639,7 @@ export const PodManagerClient: React.FC<PodManagerClientProps> = ({
               <p className="text-xs font-medium">No delivery trips match the selected filter criteria.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-270px)] scrollbar-thin pr-1">
               {tripGroups.map((group) => {
                 const isExpanded = expandedTrips.has(group.tripId);
                 const isAllReceived = group.podStatus === "COMPLETED";
@@ -878,10 +878,10 @@ export const PodManagerClient: React.FC<PodManagerClientProps> = ({
 
       {/* PERSPECTIVE 2: Invoice-wise Flat Registry View */}
       {viewMode === "INVOICE_WISE" && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden flex flex-col min-h-0">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] scrollbar-thin">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="py-3 px-4 w-12 text-center">
                   <span className="sr-only">Select</span>

@@ -295,7 +295,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 flex flex-col min-h-0">
       {/* Toast Alert */}
       {toast && (
         <div
@@ -315,7 +315,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
       )}
 
       {/* Slim Header & Tabs Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 pt-1 shrink-0">
         <div className="flex items-center gap-2">
           <FileCheck2 className="w-5 h-5 text-indigo-600" />
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">
@@ -365,9 +365,9 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-260px)] scrollbar-thin">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+                <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
                   <tr>
                     <th className="py-3 px-4">Trip No</th>
                     <th className="py-3 px-4">Vehicle & Driver</th>
@@ -702,9 +702,9 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)] scrollbar-thin">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+                  <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
                     <tr>
                       <th className="py-3 px-4">Commercial Invoice No</th>
                       <th className="py-3 px-4">Trip No & Vehicle</th>

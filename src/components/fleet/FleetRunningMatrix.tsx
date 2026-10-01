@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Truck,
   RotateCcw,
+  ExternalLink,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -89,6 +90,7 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
   // Filters
   const [search, setSearch] = useState("");
   const [plantFilter, setPlantFilter] = useState("ALL");
+  const [rateBasisFilter, setRateBasisFilter] = useState<"ALL" | "KM" | "FIXED">("KM");
 
   // Status/Comment Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -164,6 +166,8 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
   const filteredVehicles = useMemo(() => {
     return vehicles.filter((v) => {
       if (plantFilter !== "ALL" && v.homePlant !== plantFilter) return false;
+      if (rateBasisFilter === "KM" && v.paymentBasis !== "KM_BASED" && v.paymentBasis !== "KM") return false;
+      if (rateBasisFilter === "FIXED" && v.paymentBasis !== "FIXED") return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
@@ -173,7 +177,7 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
         v.homePlant.toLowerCase().includes(q)
       );
     });
-  }, [vehicles, search, plantFilter]);
+  }, [vehicles, search, plantFilter, rateBasisFilter]);
 
   // Open Edit Modal for a Cell
   const handleCellClick = (v: VehicleMatrixItem, dayData: DayData) => {
@@ -346,9 +350,9 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
   };
 
   return (
-    <div className="space-y-2.5 w-full min-w-0 pb-16 px-1.5 sm:px-3 text-slate-800">
+    <div className="space-y-2 w-full min-w-0 text-slate-800 flex flex-col min-h-0">
       {/* Top Header & Year/Month Controls Toolbar */}
-      <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-2.5">
+      <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-xs">
             <Truck className="w-4 h-4 text-amber-400" />
@@ -461,7 +465,7 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
       </div>
 
       {/* Sub-bar: Search, Plant Filters & Color Legend */}
-      <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Search */}
           <div className="relative w-44 sm:w-56">
@@ -473,6 +477,20 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
               placeholder="Search vehicle, driver..."
               className="w-full h-7 text-xs border border-slate-200 rounded-lg pl-8 pr-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
             />
+          </div>
+
+          {/* Rate Basis Selector (Default: KM) */}
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-slate-500 font-medium">Rate Basis:</span>
+            <select
+              value={rateBasisFilter}
+              onChange={(e) => setRateBasisFilter(e.target.value as "ALL" | "KM" | "FIXED")}
+              className="h-7 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 text-slate-700 font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="KM">KM-Based (Default)</option>
+              <option value="FIXED">Fixed Contract</option>
+              <option value="ALL">All Rate Bases</option>
+            </select>
           </div>
 
           {/* Plant Selector */}
@@ -516,20 +534,20 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
       </div>
 
       {/* Main 31-Day Matrix Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col min-h-0">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] scrollbar-thin">
           <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
             {/* Table Header */}
-            <thead>
+            <thead className="bg-slate-900 text-white uppercase text-[10px] tracking-wider border-b border-slate-800 sticky top-0 z-30 shadow-xs">
               <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider border-b border-slate-800">
                 {/* Fixed Left Header Columns */}
-                <th className="py-2.5 px-3 sticky left-0 z-20 bg-slate-900 font-bold border-r border-slate-800 w-28">
+                <th className="py-2.5 px-2.5 sticky left-0 z-30 bg-slate-900 font-bold border-r border-slate-800 w-20 min-w-[76px] max-w-[80px]">
                   Vehicle Type
                 </th>
-                <th className="py-2.5 px-3 sticky left-28 z-20 bg-slate-900 font-bold border-r border-slate-800 w-52">
+                <th className="py-2.5 px-2.5 sticky left-[76px] z-30 bg-slate-900 font-bold border-r border-slate-800 w-40 min-w-[150px] max-w-[160px]">
                   Vehicle & Driver
                 </th>
-                <th className="py-2.5 px-2.5 text-center font-bold border-r border-slate-800 w-20">
+                <th className="py-2.5 px-2 text-center font-bold border-r border-slate-800 w-16 min-w-[58px] max-w-[62px]">
                   Rate Basis
                 </th>
 
@@ -537,27 +555,24 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
                   <th
                     key={d}
-                    className="py-2.5 px-1 text-center font-bold border-r border-slate-800 min-w-[34px] max-w-[38px]"
+                    className="py-2.5 px-1 text-center font-bold border-r border-slate-800 min-w-[46px] max-w-[50px]"
                   >
                     {d}
                   </th>
                 ))}
 
-                {/* Right Summary Columns */}
-                <th className="py-2.5 px-2.5 text-right font-bold border-r border-slate-800 bg-slate-900 sticky right-[320px] z-10 w-24">
+                {/* Right Summary Columns (Remarks column removed as requested) */}
+                <th className="py-2.5 px-2 text-right font-bold border-r border-slate-800 bg-slate-900 sticky right-[168px] z-20 w-20 min-w-[76px]">
                   Total KM
                 </th>
-                <th className="py-2.5 px-2 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[240px] z-10 w-20">
+                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[112px] z-20 w-14 min-w-[54px]">
                   # Heldup
                 </th>
-                <th className="py-2.5 px-2 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[160px] z-10 w-20">
+                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[56px] z-20 w-14 min-w-[54px]">
                   # Working
                 </th>
-                <th className="py-2.5 px-2 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[90px] z-10 w-20">
+                <th className="py-2.5 px-1.5 text-center font-bold bg-slate-900 sticky right-0 z-20 w-14 min-w-[54px]">
                   # Absent
-                </th>
-                <th className="py-2.5 px-3 text-left font-bold bg-slate-900 sticky right-0 z-10 w-28">
-                  Remarks
                 </th>
               </tr>
             </thead>
@@ -567,7 +582,7 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
               {filteredVehicles.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={daysInMonth + 8}
+                    colSpan={daysInMonth + 7}
                     className="py-12 text-center text-slate-400 font-medium"
                   >
                     No vehicles found for the selected criteria.
@@ -581,22 +596,22 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                       className="hover:bg-slate-50/70 transition-colors group"
                     >
                       {/* Vehicle Type */}
-                      <td className="py-2 px-3 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 text-slate-700 font-medium text-xs">
+                      <td className="py-2 px-2.5 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 text-slate-700 font-medium text-[11px] w-20 min-w-[76px] max-w-[80px] truncate">
                         {v.vehicleType}
                       </td>
 
                       {/* Vehicle Plate & Driver */}
-                      <td className="py-2 px-3 sticky left-28 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200">
+                      <td className="py-2 px-2.5 sticky left-[76px] z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 w-40 min-w-[150px] max-w-[160px]">
                         <div className="font-bold text-slate-900 text-xs tracking-tight">
                           {v.vehicleNumber}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[190px]">
+                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
                           {v.driverName}
                         </div>
                       </td>
 
                       {/* Payment Basis */}
-                      <td className="py-2 px-2 text-center border-r border-slate-200">
+                      <td className="py-2 px-1 text-center border-r border-slate-200 w-16 min-w-[58px] max-w-[62px]">
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                             v.paymentBasis === "FIXED"
@@ -672,7 +687,7 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                           <td
                             key={d}
                             onClick={() => handleCellClick(v, dayData)}
-                            className={`py-2 px-0.5 text-center border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative ${cellBg} ${textColor}`}
+                            className={`py-2 px-1 text-center border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative min-w-[46px] max-w-[50px] ${cellBg} ${textColor}`}
                             title={tooltipText}
                           >
                             <span>{displayVal || "·"}</span>
@@ -688,30 +703,25 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
 
                       {/* Right Summary Totals */}
                       {/* Total KM */}
-                      <td className="py-2 px-2.5 text-right font-bold text-xs tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[320px] z-10">
+                      <td className="py-2 px-2 text-right font-bold text-xs tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[168px] z-10 w-20 min-w-[76px]">
                         {v.summary.totalActualKm > 0
                           ? v.summary.totalActualKm.toFixed(0)
                           : v.summary.totalPlannedKm.toFixed(0)}
                       </td>
 
                       {/* # Heldup Days */}
-                      <td className="py-2 px-2 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[240px] z-10 text-blue-700">
+                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[112px] z-10 w-14 min-w-[54px] text-blue-700">
                         {v.summary.heldupDays}
                       </td>
 
                       {/* # Working Days */}
-                      <td className="py-2 px-2 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[160px] z-10 text-emerald-700">
+                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[56px] z-10 w-14 min-w-[54px] text-emerald-700">
                         {v.summary.workingDays}
                       </td>
 
                       {/* # Absent / Breakdown Days */}
-                      <td className="py-2 px-2 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[90px] z-10 text-rose-700">
+                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums bg-white group-hover:bg-slate-50 sticky right-0 z-10 w-14 min-w-[54px] text-rose-700">
                         {v.summary.didNotReportDays + v.summary.absentDays}
-                      </td>
-
-                      {/* Remarks */}
-                      <td className="py-2 px-3 text-left text-[11px] text-slate-500 truncate max-w-[140px] bg-white group-hover:bg-slate-50 sticky right-0 z-10" title={v.summary.remarks || ""}>
-                        {v.summary.remarks || "-"}
                       </td>
                     </tr>
                   );
@@ -763,11 +773,26 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                   </span>
                 </div>
                 {selectedDay.tripCount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-medium">Allocated Trips:</span>
-                    <span className="font-semibold text-emerald-700">
-                      {selectedDay.trips.map((t) => t.tripNo).join(", ")}
-                    </span>
+                  <div className="pt-1 border-t border-slate-200/80">
+                    <span className="text-slate-500 font-medium block mb-1">Allocated Trips (Click to view details):</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedDay.trips.map((t) => (
+                        <a
+                          key={t.id}
+                          href={`/trips/${t.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200 text-xs font-bold transition shadow-2xs group cursor-pointer"
+                          title="Open Trip Details in new tab"
+                        >
+                          <span>{t.tripNo}</span>
+                          <span className="text-[10px] text-slate-400 group-hover:text-indigo-600">
+                            ({t.actualKm ? `${t.actualKm} km` : `${t.plannedKm || 0} km`})
+                          </span>
+                          <ExternalLink className="w-3 h-3 text-indigo-500 shrink-0" />
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -81,9 +81,9 @@ export function FleetAvailabilityView({
   const allocatedPct = totalFleet > 0 ? Math.round((allocatedCount / totalFleet) * 100) : 0;
 
   return (
-    <div className="space-y-3 w-full min-w-0">
+    <div className="space-y-2.5 w-full min-w-0 flex flex-col min-h-0">
       {/* Slim Header & Filters Bar (No bulky card, no subtitle) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 pt-1 shrink-0">
         <div className="flex items-center gap-2">
           <Truck className="w-5 h-5 text-indigo-600" />
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">Fleet Availability</h1>
@@ -129,7 +129,7 @@ export function FleetAvailabilityView({
       </div>
 
       {/* 5 Metric Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 shrink-0">
         <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-gray-200 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-gray-400">
             <span className="text-[10px] font-bold uppercase tracking-wider">Total Fleet</span>
@@ -189,8 +189,8 @@ export function FleetAvailabilityView({
       </div>
 
       {/* Main Vehicles Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden flex flex-col min-h-0">
+        <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-2">
             <Truck className="w-4 h-4 text-indigo-600" />
             <span>Fleet Availability ({filteredVehicles.length})</span>
@@ -208,10 +208,10 @@ export function FleetAvailabilityView({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] scrollbar-thin">
           <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-[10px] tracking-wider">
+            <thead className="sticky top-0 z-20 shadow-xs bg-slate-100 border-b border-gray-200">
+              <tr className="bg-slate-100 border-b border-gray-200 text-gray-700 uppercase text-[10px] tracking-wider font-bold">
                 <th className="py-2.5 px-3.5 font-bold">Vehicle No</th>
                 <th className="py-2.5 px-3 font-bold">Type</th>
                 <th className="py-2.5 px-3 font-bold">Home Plant</th>

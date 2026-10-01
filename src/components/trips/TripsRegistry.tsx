@@ -349,9 +349,9 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
   const modalVariance = !isNaN(modalActualKm) ? modalActualKm - modalPlannedKm : null;
 
   return (
-    <div className="space-y-2.5 w-full min-w-0 pb-16 px-1 sm:px-3">
+    <div className="space-y-2 w-full min-w-0 flex flex-col min-h-0">
       {/* Slim Top Bar: KPI Summary & Action Buttons in a Single Line */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-2xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-2xs shrink-0">
         {/* Slim KPI Cards in one line - Equal Widths */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Total Trips */}
@@ -427,7 +427,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-gray-200 shadow-xs space-y-2.5">
+      <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-gray-200 shadow-xs space-y-2.5 shrink-0">
         {/* Top Filter Row: Search & Status Tabs */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           <div className="relative flex-1 max-w-md">
@@ -538,10 +538,10 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
       </div>
 
       {/* Trips Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden flex flex-col min-h-0">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-235px)] scrollbar-thin">
           <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+            <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="py-2.5 px-3 w-36 whitespace-nowrap">Trip Number</th>
                 <th className="py-2.5 px-3 w-24 whitespace-nowrap">Date</th>

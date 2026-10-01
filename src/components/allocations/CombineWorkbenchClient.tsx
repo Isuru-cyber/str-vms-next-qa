@@ -876,13 +876,9 @@ export function CombineWorkbenchClient({
       vehicle_number: trip?.vehicle?.vehicleNumber || "Unassigned",
       vehicle_type: trip?.vehicle?.vehicleType || "Standard Fleet",
       driver_name: trip?.driver?.name || "Assigned Driver",
-      driver_nic: trip?.driver?.nic
-        ? `${trip.driver.nic.slice(0, 3)}*****${trip.driver.nic.slice(-2)} (Masked for Privacy)`
-        : "N/A",
+      driver_nic: trip?.driver?.nic || (trip as any)?.driverNic || "N/A",
       driver_mobile: trip?.driver?.mobile || "N/A",
-      driver_license: (trip?.driver?.licenseNumber || trip?.driver?.license)
-        ? `*****${String(trip?.driver?.licenseNumber || trip?.driver?.license).slice(-3)}`
-        : "N/A",
+      driver_license: trip?.driver?.licenseNumber || trip?.driver?.license || "N/A",
       total_cbm: totalCbm.toFixed(2),
       total_kg: Math.round(totalKg).toLocaleString(),
       requests_breakdown: breakdownText || "No requests linked yet",
@@ -900,7 +896,7 @@ export function CombineWorkbenchClient({
     let subj = tpl.subject || "";
     let body = tpl.body || "";
     for (const [k, v] of Object.entries(placeholders)) {
-      const re = new RegExp(`\\{${k}\\}`, "g");
+      const re = new RegExp(`\\{${k}\\}`, "gi");
       subj = subj.replace(re, v);
       body = body.replace(re, v);
     }

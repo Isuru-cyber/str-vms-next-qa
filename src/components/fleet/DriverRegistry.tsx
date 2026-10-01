@@ -185,9 +185,9 @@ export function DriverRegistry({
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex-1 flex flex-col min-h-0">
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-170px)] scrollbar-thin">
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="py-3 px-4">Driver Name</th>
                 <th className="py-3 px-4">NIC Number</th>

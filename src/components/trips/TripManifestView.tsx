@@ -159,7 +159,7 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
     let subj = tpl.subject || "";
     let body = tpl.body || "";
     for (const [k, v] of Object.entries(placeholders)) {
-      const re = new RegExp(`\\{${k}\\}`, "g");
+      const re = new RegExp(`\\{${k}\\}`, "gi");
       subj = subj.replace(re, v);
       body = body.replace(re, v);
     }
