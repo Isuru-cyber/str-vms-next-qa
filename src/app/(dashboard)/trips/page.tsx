@@ -1,7 +1,7 @@
 import React from "react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { isAdmin } from "@/lib/permissions";
+import { isAdmin, can } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { TripsRegistry } from "@/components/trips/TripsRegistry";
 
