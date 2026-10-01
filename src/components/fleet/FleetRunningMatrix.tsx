@@ -120,20 +120,20 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
       const containerRect = container.getBoundingClientRect();
       const targetRect = targetEl.getBoundingClientRect();
 
-      // Check if target is inside the visible window between left (395px) and right (320px) sticky columns
-      const leftFrozenEdge = containerRect.left + 395;
-      const rightFrozenEdge = containerRect.right - 320;
+      // Check if target is inside the visible window between left (320px) and right (300px) sticky columns
+      const leftFrozenEdge = containerRect.left + 320;
+      const rightFrozenEdge = containerRect.right - 300;
 
       const isFullyVisible =
-        targetRect.left >= leftFrozenEdge + 15 &&
-        targetRect.right <= rightFrozenEdge - 15;
+        targetRect.left >= leftFrozenEdge + 10 &&
+        targetRect.right <= rightFrozenEdge - 10;
 
       if (!isFullyVisible) {
         const targetOffsetLeft = targetEl.offsetLeft;
         const targetWidth = targetEl.offsetWidth;
-        const availableWidth = container.clientWidth - 395 - 320;
+        const availableWidth = container.clientWidth - 320 - 300;
         const desiredScrollLeft =
-          targetOffsetLeft - 395 - (availableWidth / 2) + (targetWidth / 2);
+          targetOffsetLeft - 320 - (availableWidth / 2) + (targetWidth / 2);
 
         container.scrollTo({
           left: Math.max(0, desiredScrollLeft),
@@ -581,18 +581,32 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
       {/* Main 31-Day Matrix Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col min-h-0">
         <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] scrollbar-thin">
-          <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
+          <table className="w-full border-separate border-spacing-0 text-left text-xs whitespace-nowrap table-fixed">
+            {/* Explicit Column Sizing */}
+            <colgroup>
+              <col className="w-[100px] min-w-[100px] max-w-[100px]" />
+              <col className="w-[150px] min-w-[150px] max-w-[150px]" />
+              <col className="w-[70px] min-w-[70px] max-w-[70px]" />
+              {Array.from({ length: daysInMonth }, (_, i) => (
+                <col key={i + 1} className="w-[48px] min-w-[48px] max-w-[48px]" />
+              ))}
+              <col className="w-[90px] min-w-[90px] max-w-[90px]" />
+              <col className="w-[70px] min-w-[70px] max-w-[70px]" />
+              <col className="w-[70px] min-w-[70px] max-w-[70px]" />
+              <col className="w-[70px] min-w-[70px] max-w-[70px]" />
+            </colgroup>
+
             {/* Table Header */}
-            <thead className="bg-slate-900 text-white uppercase text-[10px] tracking-wider border-b border-slate-800 sticky top-0 z-30 shadow-xs">
-              <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-900 text-white uppercase text-[10px] tracking-wider sticky top-0 z-30 shadow-xs">
+              <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider">
                 {/* Fixed Left Header Columns */}
-                <th className="py-2.5 px-2.5 sticky left-0 z-30 bg-slate-900 font-bold border-r border-slate-800 w-[110px] min-w-[110px] max-w-[110px]">
+                <th className="py-2.5 px-2 sticky left-0 z-40 bg-slate-900 font-bold border-b border-r border-slate-800 w-[100px] min-w-[100px] max-w-[100px]">
                   Vehicle Type
                 </th>
-                <th className="py-2.5 px-2.5 sticky left-[110px] z-30 bg-slate-900 font-bold border-r border-slate-800 w-[210px] min-w-[210px] max-w-[210px]">
+                <th className="py-2.5 px-2 sticky left-[100px] z-40 bg-slate-900 font-bold border-b border-r border-slate-800 w-[150px] min-w-[150px] max-w-[150px]">
                   Vehicle & Driver
                 </th>
-                <th className="py-2.5 px-2 text-center font-bold sticky left-[320px] z-30 bg-slate-900 border-r-2 border-slate-700 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.25)] w-[75px] min-w-[75px] max-w-[75px]">
+                <th className="py-2.5 px-1.5 text-center font-bold sticky left-[250px] z-40 bg-slate-900 border-b border-r-2 border-slate-700 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.3)] w-[70px] min-w-[70px] max-w-[70px]">
                   Rate Basis
                 </th>
 
@@ -603,7 +617,7 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                     <th
                       key={d}
                       id={`matrix-day-col-${d}`}
-                      className={`py-2 px-0.5 text-center font-bold border-r border-slate-800 w-[48px] min-w-[48px] max-w-[48px] transition-colors ${
+                      className={`py-2 px-0.5 text-center font-bold border-b border-r border-slate-800 w-[48px] min-w-[48px] max-w-[48px] transition-colors ${
                         isTodayCol ? "bg-amber-400 text-slate-950 ring-2 ring-amber-300 relative z-20" : ""
                       }`}
                     >
@@ -620,28 +634,28 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                 })}
 
                 {/* Right Summary Columns (Sticky Right) */}
-                <th className="py-2.5 px-2 text-right font-bold bg-slate-900 sticky right-[225px] z-30 border-l-2 border-slate-700 shadow-[-2px_0_4px_-1px_rgba(0,0,0,0.25)] w-[95px] min-w-[95px] max-w-[95px]">
+                <th className="py-2.5 px-2 text-right font-bold bg-slate-900 sticky right-[210px] z-40 border-b border-l-2 border-slate-700 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.3)] w-[90px] min-w-[90px] max-w-[90px]">
                   Total KM
                 </th>
-                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[150px] z-30 w-[75px] min-w-[75px] max-w-[75px]">
+                <th className="py-2.5 px-1.5 text-center font-bold border-b border-r border-slate-800 bg-slate-900 sticky right-[140px] z-40 w-[70px] min-w-[70px] max-w-[70px]">
                   # Heldup
                 </th>
-                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[75px] z-30 w-[75px] min-w-[75px] max-w-[75px]">
+                <th className="py-2.5 px-1.5 text-center font-bold border-b border-r border-slate-800 bg-slate-900 sticky right-[70px] z-40 w-[70px] min-w-[70px] max-w-[70px]">
                   # Working
                 </th>
-                <th className="py-2.5 px-1.5 text-center font-bold bg-slate-900 sticky right-0 z-30 w-[75px] min-w-[75px] max-w-[75px]">
+                <th className="py-2.5 px-1.5 text-center font-bold bg-slate-900 sticky right-0 z-40 border-b border-slate-800 w-[70px] min-w-[70px] max-w-[70px]">
                   # Absent
                 </th>
               </tr>
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {filteredVehicles.length === 0 ? (
                 <tr>
                   <td
                     colSpan={daysInMonth + 7}
-                    className="py-12 text-center text-slate-400 font-medium"
+                    className="py-12 text-center text-slate-400 font-medium border-b border-slate-200"
                   >
                     No vehicles found for the selected criteria.
                   </td>
@@ -654,22 +668,25 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                       className="hover:bg-slate-50/70 transition-colors group"
                     >
                       {/* Vehicle Type (Sticky Left 0) */}
-                      <td className="py-2 px-2.5 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 text-slate-700 font-medium text-[11px] w-[110px] min-w-[110px] max-w-[110px] truncate">
+                      <td
+                        className="py-2 px-2 sticky left-0 z-20 bg-white group-hover:bg-slate-50 border-b border-r border-slate-200 text-slate-700 font-medium text-[11px] w-[100px] min-w-[100px] max-w-[100px] truncate"
+                        title={v.vehicleType}
+                      >
                         {v.vehicleType}
                       </td>
 
-                      {/* Vehicle Plate & Driver (Sticky Left 110px) */}
-                      <td className="py-2 px-2.5 sticky left-[110px] z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 w-[210px] min-w-[210px] max-w-[210px]">
+                      {/* Vehicle Plate & Driver (Sticky Left 100px) */}
+                      <td className="py-2 px-2 sticky left-[100px] z-20 bg-white group-hover:bg-slate-50 border-b border-r border-slate-200 w-[150px] min-w-[150px] max-w-[150px]">
                         <div className="font-bold text-slate-900 text-xs tracking-tight truncate">
                           {v.vehicleNumber}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[190px]">
+                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[135px]" title={v.driverName}>
                           {v.driverName}
                         </div>
                       </td>
 
-                      {/* Payment Basis (Sticky Left 320px with divider shadow) */}
-                      <td className="py-2 px-1 text-center sticky left-[320px] z-10 bg-white group-hover:bg-slate-50 border-r-2 border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.08)] w-[75px] min-w-[75px] max-w-[75px]">
+                      {/* Payment Basis (Sticky Left 250px with divider shadow) */}
+                      <td className="py-2 px-1 text-center sticky left-[250px] z-20 bg-white group-hover:bg-slate-50 border-b border-r-2 border-slate-300 shadow-[4px_0_6px_-2px_rgba(0,0,0,0.12)] w-[70px] min-w-[70px] max-w-[70px]">
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                             v.paymentBasis === "FIXED"
@@ -745,7 +762,7 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                           <td
                             key={d}
                             onClick={() => handleCellClick(v, dayData)}
-                            className={`py-2 px-1 text-center border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative w-[48px] min-w-[48px] max-w-[48px] ${cellBg} ${textColor}`}
+                            className={`py-2 px-1 text-center border-b border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative w-[48px] min-w-[48px] max-w-[48px] ${cellBg} ${textColor}`}
                             title={tooltipText}
                           >
                             <span>{displayVal || "·"}</span>
@@ -761,24 +778,24 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
 
                       {/* Right Summary Totals (Sticky Right) */}
                       {/* Total KM */}
-                      <td className="py-2 px-2 text-right font-bold text-xs tabular-nums bg-white group-hover:bg-slate-50 sticky right-[225px] z-10 border-l-2 border-slate-300 shadow-[-2px_0_4px_-1px_rgba(0,0,0,0.08)] w-[95px] min-w-[95px] max-w-[95px]">
+                      <td className="py-2 px-2 text-right font-bold text-xs tabular-nums bg-white group-hover:bg-slate-50 sticky right-[210px] z-20 border-b border-l-2 border-slate-300 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.12)] w-[90px] min-w-[90px] max-w-[90px]">
                         {v.summary.totalActualKm > 0
                           ? v.summary.totalActualKm.toFixed(0)
                           : v.summary.totalPlannedKm.toFixed(0)}
                       </td>
 
                       {/* # Heldup Days */}
-                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[150px] z-10 w-[75px] min-w-[75px] max-w-[75px] text-blue-700">
+                      <td className="py-2 px-1 text-center text-xs font-bold tabular-nums border-b border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[140px] z-20 w-[70px] min-w-[70px] max-w-[70px] text-blue-700">
                         {v.summary.heldupDays}
                       </td>
 
                       {/* # Working Days */}
-                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[75px] z-10 w-[75px] min-w-[75px] max-w-[75px] text-emerald-700">
+                      <td className="py-2 px-1 text-center text-xs font-bold tabular-nums border-b border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[70px] z-20 w-[70px] min-w-[70px] max-w-[70px] text-emerald-700">
                         {v.summary.workingDays}
                       </td>
 
                       {/* # Absent / Breakdown Days */}
-                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums bg-white group-hover:bg-slate-50 sticky right-0 z-10 w-[75px] min-w-[75px] max-w-[75px] text-rose-700">
+                      <td className="py-2 px-1 text-center text-xs font-bold tabular-nums bg-white group-hover:bg-slate-50 sticky right-0 z-20 border-b border-slate-200 w-[70px] min-w-[70px] max-w-[70px] text-rose-700">
                         {v.summary.didNotReportDays + v.summary.absentDays}
                       </td>
                     </tr>
