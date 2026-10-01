@@ -42,6 +42,7 @@ model User {
   gatePasses      TripGatePass[]
   activityLogs    ActivityLog[]
   auditLogs       AuditLog[]
+  dailyLogs       VehicleDailyLog[]
 
   @@index([roleId], map: "idx_u_role_id")
   @@index([email], map: "idx_u_email")
@@ -210,6 +211,7 @@ model Vehicle {
   defaultLocation   Location?      @relation("VehicleDefaultLocation", fields: [defaultLocationId], references: [id])
   drivers           Driver[]       @relation("DriverLinkedVehicle")
   deliveryTrips     DeliveryTrip[]
+  dailyLogs         VehicleDailyLog[]
 
   @@index([status], map: "idx_v_status")
   @@index([active], map: "idx_v_active")
@@ -552,4 +554,22 @@ model AuditLog {
   @@index([module, action, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model VehicleDailyLog {
+  id          Int      @id @default(autoincrement())
+  vehicleId   Int      @map("vehicle_id")
+  logDate     DateTime @map("log_date") @db.Date
+  status      String   @default("WORKING") @db.VarChar(30)
+  remarks     String?  @db.Text
+  createdById Int?     @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation(fields: [createdById], references: [id])
+
+  @@unique([vehicleId, logDate], map: "uq_v_daily_log")
+  @@index([logDate], map: "idx_v_log_date")
+  @@map("vehicle_daily_logs")
 }

@@ -113,6 +113,13 @@ export function FleetAvailabilityView({
           </select>
 
           <Link
+            href="/fleet/matrix"
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors border border-indigo-200 shadow-2xs flex items-center gap-1.5"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            Running Matrix
+          </Link>
+          <Link
             href="/fleet/vehicles"
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors border border-slate-200 shadow-2xs"
           >

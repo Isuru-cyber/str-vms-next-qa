@@ -144,6 +144,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           visible: can(user, "view_fleet"),
         },
         {
+          name: "Running Matrix",
+          href: "/fleet/matrix",
+          icon: FileSpreadsheet,
+          visible: can(user, "view_fleet"),
+        },
+        {
           name: "Drivers",
           href: "/fleet/drivers",
           icon: Users,
