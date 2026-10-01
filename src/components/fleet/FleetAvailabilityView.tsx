@@ -81,7 +81,7 @@ export function FleetAvailabilityView({
   const allocatedPct = totalFleet > 0 ? Math.round((allocatedCount / totalFleet) * 100) : 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full min-w-0">
       {/* Slim Header & Filters Bar (No bulky card, no subtitle) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 pt-1">
         <div className="flex items-center gap-2">
@@ -202,28 +202,32 @@ export function FleetAvailabilityView({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs whitespace-nowrap">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-gray-400 uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-6 font-bold">Vehicle Details</th>
-                <th className="py-3 px-6 font-bold">Real-Time Status</th>
-                <th className="py-3 px-6 font-bold">Assigned Driver</th>
-                <th className="py-3 px-6 font-bold">Payment Basis</th>
-                <th className="py-3 px-6 font-bold">MTD Running</th>
-                <th className="py-3 px-6 font-bold">Utilization Progress</th>
-                <th className="py-3 px-6 font-bold text-right">Target Rate</th>
+              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-3.5 font-bold">Vehicle No</th>
+                <th className="py-2.5 px-3 font-bold">Type</th>
+                <th className="py-2.5 px-3 font-bold">Home Plant</th>
+                <th className="py-2.5 px-3 font-bold text-right">Max Payload</th>
+                <th className="py-2.5 px-3 font-bold text-center">Status</th>
+                <th className="py-2.5 px-3 font-bold">Active Trip</th>
+                <th className="py-2.5 px-3 font-bold">Assigned Driver</th>
+                <th className="py-2.5 px-3 font-bold">Driver Phone</th>
+                <th className="py-2.5 px-3 font-bold">Payment Basis</th>
+                <th className="py-2.5 px-3 font-bold text-right">MTD Distance</th>
+                <th className="py-2.5 px-3 font-bold text-center">MTD Trips</th>
+                <th className="py-2.5 px-3.5 font-bold text-right">Utilization</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredVehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-400">
+                  <td colSpan={12} className="py-12 text-center text-gray-400">
                     No fleet vehicles matching the criteria
                   </td>
                 </tr>
               ) : (
                 filteredVehicles.map((v) => {
-                  const isKmBased = v.paymentBasis === "KM_BASED";
                   const progressPct = Math.min(100, v.utilizationPct);
 
                   let barColor = "bg-emerald-500";
@@ -232,118 +236,101 @@ export function FleetAvailabilityView({
 
                   return (
                     <tr key={v.id} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                            {v.vehicleNumber.slice(0, 3)}
-                          </div>
-                          <div>
-                            <span className="font-bold text-gray-900 block text-sm tracking-tight">
-                              {v.vehicleNumber}
-                            </span>
-                            <span className="text-[10px] text-gray-500">
-                              {v.vehicleType} &bull; Max {formatNumber(v.maxPayloadKg, 0)} KG &bull;{" "}
-                              {v.homePlant}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        <div className="flex flex-col gap-1">
-                          <StatusBadge status={v.status} />
-                          {v.activeTripNo && (
-                            <Link
-                              href={`/allocations/fg/combine/${v.activeTripId || ""}`}
-                              className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-0.5"
-                            >
-                              <span>{v.activeTripNo}</span>
-                              <ExternalLink className="w-2.5 h-2.5" />
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        {v.driverName ? (
-                          <div>
-                            <span className="font-bold text-gray-800 block">{v.driverName}</span>
-                            <span className="text-[11px] text-gray-500 tabular-nums">
-                              {v.driverPhone || "-"}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic text-[11px]">Unassigned</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-6 whitespace-nowrap font-semibold text-gray-700 uppercase text-[11px]">
-                        {v.paymentBasis}
-                      </td>
-
-                      <td className="py-3.5 px-6 whitespace-nowrap">
-                        <div>
-                          <span className="font-bold text-gray-900 text-sm block tabular-nums">
-                            {formatNumber(v.mtdKm, 1)} KM
-                          </span>
-                          <span className="text-[10px] text-gray-400 tabular-nums">
-                            {v.mtdTrips} Trip(s) Completed
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-6 whitespace-nowrap min-w-[200px]">
-                        {isKmBased ? (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] tabular-nums text-gray-500">
-                              <span>Rate per KM basis</span>
-                              <span>{formatNumber(v.mtdKm, 0)} KM run</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-indigo-600 h-2 rounded-full"
-                                style={{ width: `${Math.min(100, (v.mtdKm / 3000) * 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] tabular-nums text-gray-500">
-                              <span>
-                                {formatNumber(v.mtdKm, 0)} / {formatNumber(v.targetLimit, 0)} KM
-                              </span>
-                              <span
-                                className={
-                                  v.utilizationPct > 100 ? "text-rose-600 font-bold" : ""
-                                }
-                              >
-                                {v.utilizationPct > 100
-                                  ? `+${formatNumber(v.mtdKm - v.targetLimit, 0)} Exceeded`
-                                  : `${formatNumber(v.targetLimit - v.mtdKm, 0)} Rem.`}
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                              <div
-                                className={`${barColor} h-2 rounded-full transition-all duration-500`}
-                                style={{ width: `${progressPct}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-6 whitespace-nowrap text-right font-bold text-sm tabular-nums">
-                        <span
-                          className={
-                            v.utilizationPct > 100
-                              ? "text-rose-600"
-                              : v.utilizationPct > 85
-                              ? "text-amber-600"
-                              : "text-emerald-700"
-                          }
-                        >
-                          {v.utilizationPct.toFixed(1)}%
+                      {/* Vehicle Number (No icon, clean single line) */}
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        <span className="font-bold text-gray-900 text-xs tracking-tight">
+                          {v.vehicleNumber}
                         </span>
+                      </td>
+
+                      {/* Vehicle Type */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-gray-700 text-xs font-medium">
+                        {v.vehicleType}
+                      </td>
+
+                      {/* Home Plant */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-gray-600 text-xs">
+                        {v.homePlant}
+                      </td>
+
+                      {/* Capacity / Max Payload */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-right text-gray-700 text-xs font-medium tabular-nums">
+                        {formatNumber(v.maxPayloadKg, 0)} KG
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-center">
+                        <StatusBadge status={v.status} />
+                      </td>
+
+                      {/* Active Trip */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        {v.activeTripNo ? (
+                          <Link
+                            href={`/allocations/fg/combine/${v.activeTripId || ""}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md hover:underline"
+                            title="View Active Trip"
+                          >
+                            <span>{v.activeTripNo}</span>
+                            <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </td>
+
+                      {/* Driver Name */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <span className="font-medium text-gray-800 text-xs">
+                          {v.driverName || "Unassigned"}
+                        </span>
+                      </td>
+
+                      {/* Driver Phone */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-gray-600 text-xs tabular-nums">
+                        {v.driverPhone || "-"}
+                      </td>
+
+                      {/* Payment Basis */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold uppercase text-[10px] border border-slate-200">
+                          {v.paymentBasis}
+                        </span>
+                      </td>
+
+                      {/* MTD Running KM */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-right font-bold text-gray-900 text-xs tabular-nums">
+                        {formatNumber(v.mtdKm, 1)} KM
+                      </td>
+
+                      {/* MTD Trips */}
+                      <td className="py-2.5 px-3 whitespace-nowrap text-center text-gray-700 text-xs tabular-nums">
+                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
+                          {v.mtdTrips} Trips
+                        </span>
+                      </td>
+
+                      {/* Utilization */}
+                      <td className="py-2.5 px-3.5 whitespace-nowrap text-right">
+                        <div className="inline-flex items-center gap-2 justify-end min-w-[130px]">
+                          <div className="w-16 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`${barColor} h-1.5 rounded-full transition-all duration-300`}
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
+                          <span
+                            className={`font-bold text-xs tabular-nums ${
+                              v.utilizationPct > 100
+                                ? "text-rose-600"
+                                : v.utilizationPct > 85
+                                ? "text-amber-600"
+                                : "text-emerald-700"
+                            }`}
+                          >
+                            {v.utilizationPct.toFixed(1)}%
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   );

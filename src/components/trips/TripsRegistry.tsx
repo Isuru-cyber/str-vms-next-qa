@@ -349,13 +349,13 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
   const modalVariance = !isNaN(modalActualKm) ? modalActualKm - modalPlannedKm : null;
 
   return (
-    <div className="space-y-2.5 w-full max-w-[1600px] mx-auto pb-16 px-1 sm:px-3">
+    <div className="space-y-2.5 w-full min-w-0 pb-16 px-1 sm:px-3">
       {/* Slim Top Bar: KPI Summary & Action Buttons in a Single Line */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-2xs">
-        {/* Slim KPI Cards in one line */}
+        {/* Slim KPI Cards in one line - Equal Widths */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Total Trips */}
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200">
+          <div className="w-[185px] flex items-center justify-between px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 shrink-0">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
               Total Trips
             </span>
@@ -365,7 +365,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
           </div>
 
           {/* Allocated / Planning */}
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-indigo-50/70 border border-indigo-200/80">
+          <div className="w-[185px] flex items-center justify-between px-3 py-1.5 rounded-lg bg-indigo-50/70 border border-indigo-200/80 shrink-0">
             <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
               Allocated / Planning
             </span>
@@ -375,7 +375,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
           </div>
 
           {/* Dispatched / On Road */}
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-50/70 border border-blue-200/80">
+          <div className="w-[185px] flex items-center justify-between px-3 py-1.5 rounded-lg bg-blue-50/70 border border-blue-200/80 shrink-0">
             <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
               Dispatched / On Road
             </span>
@@ -385,21 +385,23 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
           </div>
 
           {/* Completed Trips */}
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-50/70 border border-emerald-200/80">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-              Completed Trips
-            </span>
+          <div className="w-[185px] flex items-center justify-between px-3 py-1.5 rounded-lg bg-emerald-50/70 border border-emerald-200/80 shrink-0">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider truncate">
+                Completed
+              </span>
+              {countPendingKm > 0 && (
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0"
+                  title="Trips waiting for running sheet actual KM"
+                >
+                  {countPendingKm}
+                </span>
+              )}
+            </div>
             <span className="text-sm font-bold text-emerald-600 tabular-nums">
               {countCompleted}
             </span>
-            {countPendingKm > 0 && (
-              <span
-                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 ml-1"
-                title="Trips waiting for running sheet actual KM"
-              >
-                {countPendingKm} Needs KM
-              </span>
-            )}
           </div>
         </div>
 
@@ -550,7 +552,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                 <th className="py-2.5 px-3 text-center">Requests</th>
                 <th className="py-2.5 px-3 text-right">Planned (KM)</th>
                 <th className="py-2.5 px-3 text-right">Actual (KM)</th>
-                <th className="py-2.5 px-3 text-right">Action</th>
+                <th className="py-2.5 px-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -684,10 +686,10 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                         )}
                       </td>
 
-                      {/* Action */}
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Enter KM Button for Dispatched & Completed Trips */}
+                      {/* Action (Compact Icon) */}
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Enter / Edit KM Icon Button */}
                           {canEnterOdometer &&
                             ["DISPATCHED", "READY_FOR_LOADING", "GATE_PASS_ISSUED", "IN_TRANSIT", "COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(
                               t.status
@@ -695,23 +697,28 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                               <button
                                 type="button"
                                 onClick={() => openKmModal(t)}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer ${
+                                className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all shadow-2xs cursor-pointer ${
                                   hasActualKm
-                                    ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200"
-                                    : "bg-amber-600 hover:bg-amber-700 text-white"
+                                    ? "bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200"
+                                    : "bg-amber-500 hover:bg-amber-600 text-white animate-pulse"
                                 }`}
-                                title={hasActualKm ? "Edit logged actual KM" : "Enter driver running sheet actual KM"}
+                                title={
+                                  hasActualKm
+                                    ? `Edit Logged KM (${formatNumber(actualKmVal, 1)} KM)`
+                                    : "Enter Actual KM from Running Sheet"
+                                }
                               >
                                 <Gauge className="w-3.5 h-3.5" />
-                                <span>{hasActualKm ? "Edit KM" : "Enter KM"}</span>
                               </button>
                             )}
 
-                          {/* Final Completed Indicator */}
+                          {/* Completed Indicator */}
                           {["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(t.status) && hasActualKm && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Done</span>
+                            <span
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200"
+                              title="Trip Completed & Verified"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
                             </span>
                           )}
                         </div>
