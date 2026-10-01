@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -99,6 +99,51 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
   const [editStatus, setEditStatus] = useState<string>("WORKING");
   const [editRemarks, setEditRemarks] = useState<string>("");
   const [savingLog, setSavingLog] = useState(false);
+
+  // Table container reference for sticky and horizontal scrolling
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // Today's date calculations
+  const now = new Date();
+  const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
+  const todayDay = now.getDate();
+
+  // Auto-focus / center current date column on load or month change
+  useEffect(() => {
+    if (!isCurrentMonth) return;
+
+    const timer = setTimeout(() => {
+      const container = tableContainerRef.current;
+      const targetEl = document.getElementById(`matrix-day-col-${todayDay}`);
+      if (!container || !targetEl) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+
+      // Check if target is inside the visible window between left (395px) and right (320px) sticky columns
+      const leftFrozenEdge = containerRect.left + 395;
+      const rightFrozenEdge = containerRect.right - 320;
+
+      const isFullyVisible =
+        targetRect.left >= leftFrozenEdge + 15 &&
+        targetRect.right <= rightFrozenEdge - 15;
+
+      if (!isFullyVisible) {
+        const targetOffsetLeft = targetEl.offsetLeft;
+        const targetWidth = targetEl.offsetWidth;
+        const availableWidth = container.clientWidth - 395 - 320;
+        const desiredScrollLeft =
+          targetOffsetLeft - 395 - (availableWidth / 2) + (targetWidth / 2);
+
+        container.scrollTo({
+          left: Math.max(0, desiredScrollLeft),
+          behavior: "smooth",
+        });
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [year, month, isCurrentMonth, todayDay, isLoading]);
 
   // Conflict Warning Modal
   const [conflictWarning, setConflictWarning] = useState<{
@@ -535,43 +580,56 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
 
       {/* Main 31-Day Matrix Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col min-h-0">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] scrollbar-thin">
+        <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] scrollbar-thin">
           <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
             {/* Table Header */}
             <thead className="bg-slate-900 text-white uppercase text-[10px] tracking-wider border-b border-slate-800 sticky top-0 z-30 shadow-xs">
               <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider border-b border-slate-800">
                 {/* Fixed Left Header Columns */}
-                <th className="py-2.5 px-2.5 sticky left-0 z-30 bg-slate-900 font-bold border-r border-slate-800 w-20 min-w-[76px] max-w-[80px]">
+                <th className="py-2.5 px-2.5 sticky left-0 z-30 bg-slate-900 font-bold border-r border-slate-800 w-[110px] min-w-[110px] max-w-[110px]">
                   Vehicle Type
                 </th>
-                <th className="py-2.5 px-2.5 sticky left-[76px] z-30 bg-slate-900 font-bold border-r border-slate-800 w-40 min-w-[150px] max-w-[160px]">
+                <th className="py-2.5 px-2.5 sticky left-[110px] z-30 bg-slate-900 font-bold border-r border-slate-800 w-[210px] min-w-[210px] max-w-[210px]">
                   Vehicle & Driver
                 </th>
-                <th className="py-2.5 px-2 text-center font-bold border-r border-slate-800 w-16 min-w-[58px] max-w-[62px]">
+                <th className="py-2.5 px-2 text-center font-bold sticky left-[320px] z-30 bg-slate-900 border-r-2 border-slate-700 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.25)] w-[75px] min-w-[75px] max-w-[75px]">
                   Rate Basis
                 </th>
 
                 {/* Day Columns 1 to daysInMonth */}
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
-                  <th
-                    key={d}
-                    className="py-2.5 px-1 text-center font-bold border-r border-slate-800 min-w-[46px] max-w-[50px]"
-                  >
-                    {d}
-                  </th>
-                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+                  const isTodayCol = isCurrentMonth && d === todayDay;
+                  return (
+                    <th
+                      key={d}
+                      id={`matrix-day-col-${d}`}
+                      className={`py-2 px-0.5 text-center font-bold border-r border-slate-800 w-[48px] min-w-[48px] max-w-[48px] transition-colors ${
+                        isTodayCol ? "bg-amber-400 text-slate-950 ring-2 ring-amber-300 relative z-20" : ""
+                      }`}
+                    >
+                      <div className="flex flex-col items-center justify-center leading-tight">
+                        <span>{d}</span>
+                        {isTodayCol && (
+                          <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 bg-slate-950 text-amber-300 rounded tracking-tighter">
+                            TODAY
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
 
-                {/* Right Summary Columns (Remarks column removed as requested) */}
-                <th className="py-2.5 px-2 text-right font-bold border-r border-slate-800 bg-slate-900 sticky right-[168px] z-20 w-20 min-w-[76px]">
+                {/* Right Summary Columns (Sticky Right) */}
+                <th className="py-2.5 px-2 text-right font-bold bg-slate-900 sticky right-[225px] z-30 border-l-2 border-slate-700 shadow-[-2px_0_4px_-1px_rgba(0,0,0,0.25)] w-[95px] min-w-[95px] max-w-[95px]">
                   Total KM
                 </th>
-                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[112px] z-20 w-14 min-w-[54px]">
+                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[150px] z-30 w-[75px] min-w-[75px] max-w-[75px]">
                   # Heldup
                 </th>
-                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[56px] z-20 w-14 min-w-[54px]">
+                <th className="py-2.5 px-1.5 text-center font-bold border-r border-slate-800 bg-slate-900 sticky right-[75px] z-30 w-[75px] min-w-[75px] max-w-[75px]">
                   # Working
                 </th>
-                <th className="py-2.5 px-1.5 text-center font-bold bg-slate-900 sticky right-0 z-20 w-14 min-w-[54px]">
+                <th className="py-2.5 px-1.5 text-center font-bold bg-slate-900 sticky right-0 z-30 w-[75px] min-w-[75px] max-w-[75px]">
                   # Absent
                 </th>
               </tr>
@@ -595,23 +653,23 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                       key={v.id}
                       className="hover:bg-slate-50/70 transition-colors group"
                     >
-                      {/* Vehicle Type */}
-                      <td className="py-2 px-2.5 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 text-slate-700 font-medium text-[11px] w-20 min-w-[76px] max-w-[80px] truncate">
+                      {/* Vehicle Type (Sticky Left 0) */}
+                      <td className="py-2 px-2.5 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 text-slate-700 font-medium text-[11px] w-[110px] min-w-[110px] max-w-[110px] truncate">
                         {v.vehicleType}
                       </td>
 
-                      {/* Vehicle Plate & Driver */}
-                      <td className="py-2 px-2.5 sticky left-[76px] z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 w-40 min-w-[150px] max-w-[160px]">
-                        <div className="font-bold text-slate-900 text-xs tracking-tight">
+                      {/* Vehicle Plate & Driver (Sticky Left 110px) */}
+                      <td className="py-2 px-2.5 sticky left-[110px] z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 w-[210px] min-w-[210px] max-w-[210px]">
+                        <div className="font-bold text-slate-900 text-xs tracking-tight truncate">
                           {v.vehicleNumber}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
+                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[190px]">
                           {v.driverName}
                         </div>
                       </td>
 
-                      {/* Payment Basis */}
-                      <td className="py-2 px-1 text-center border-r border-slate-200 w-16 min-w-[58px] max-w-[62px]">
+                      {/* Payment Basis (Sticky Left 320px with divider shadow) */}
+                      <td className="py-2 px-1 text-center sticky left-[320px] z-10 bg-white group-hover:bg-slate-50 border-r-2 border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.08)] w-[75px] min-w-[75px] max-w-[75px]">
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                             v.paymentBasis === "FIXED"
@@ -687,7 +745,7 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                           <td
                             key={d}
                             onClick={() => handleCellClick(v, dayData)}
-                            className={`py-2 px-1 text-center border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative min-w-[46px] max-w-[50px] ${cellBg} ${textColor}`}
+                            className={`py-2 px-1 text-center border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative w-[48px] min-w-[48px] max-w-[48px] ${cellBg} ${textColor}`}
                             title={tooltipText}
                           >
                             <span>{displayVal || "·"}</span>
@@ -701,26 +759,26 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                         );
                       })}
 
-                      {/* Right Summary Totals */}
+                      {/* Right Summary Totals (Sticky Right) */}
                       {/* Total KM */}
-                      <td className="py-2 px-2 text-right font-bold text-xs tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[168px] z-10 w-20 min-w-[76px]">
+                      <td className="py-2 px-2 text-right font-bold text-xs tabular-nums bg-white group-hover:bg-slate-50 sticky right-[225px] z-10 border-l-2 border-slate-300 shadow-[-2px_0_4px_-1px_rgba(0,0,0,0.08)] w-[95px] min-w-[95px] max-w-[95px]">
                         {v.summary.totalActualKm > 0
                           ? v.summary.totalActualKm.toFixed(0)
                           : v.summary.totalPlannedKm.toFixed(0)}
                       </td>
 
                       {/* # Heldup Days */}
-                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[112px] z-10 w-14 min-w-[54px] text-blue-700">
+                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[150px] z-10 w-[75px] min-w-[75px] max-w-[75px] text-blue-700">
                         {v.summary.heldupDays}
                       </td>
 
                       {/* # Working Days */}
-                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[56px] z-10 w-14 min-w-[54px] text-emerald-700">
+                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums border-r border-slate-200 bg-white group-hover:bg-slate-50 sticky right-[75px] z-10 w-[75px] min-w-[75px] max-w-[75px] text-emerald-700">
                         {v.summary.workingDays}
                       </td>
 
                       {/* # Absent / Breakdown Days */}
-                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums bg-white group-hover:bg-slate-50 sticky right-0 z-10 w-14 min-w-[54px] text-rose-700">
+                      <td className="py-2 px-1.5 text-center text-xs font-bold tabular-nums bg-white group-hover:bg-slate-50 sticky right-0 z-10 w-[75px] min-w-[75px] max-w-[75px] text-rose-700">
                         {v.summary.didNotReportDays + v.summary.absentDays}
                       </td>
                     </tr>
@@ -940,13 +998,20 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                   <span className="text-[11px] font-bold text-slate-700">Recorded Trips:</span>
                   <div className="space-y-1">
                     {conflictWarning.trips.map((t) => (
-                      <div
+                      <a
                         key={t.id}
-                        className="p-2 rounded-lg bg-slate-50 border border-slate-200 flex justify-between items-center text-xs"
+                        href={`/trips/${t.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex justify-between items-center text-xs group cursor-pointer transition"
+                        title="Open Trip Details in new tab"
                       >
-                        <strong className="text-indigo-700">{t.tripNo}</strong>
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-indigo-700 group-hover:underline">{t.tripNo}</strong>
+                          <ExternalLink className="w-3 h-3 text-indigo-500" />
+                        </div>
                         <span className="text-slate-500 font-medium">Status: {t.status}</span>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </div>
