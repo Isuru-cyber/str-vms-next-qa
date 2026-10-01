@@ -582,9 +582,9 @@ export function CombineTripsRegistryClient({
 
                           {["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED", "DISPATCHED", "IN_TRANSIT"].includes(trip.status) && (
                             <Link
-                              href="/reconciliation"
+                              href="/trips"
                               className="text-emerald-600 hover:text-emerald-800 p-1 rounded hover:bg-emerald-50 transition-colors"
-                              title="Go to Reconciliation"
+                              title="View Delivery Trips Registry & Log KM"
                             >
                               <FileCheck2 className="w-4 h-4" />
                             </Link>

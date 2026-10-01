@@ -223,12 +223,12 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
           </button>
 
           <Link
-            href="/reconciliation"
+            href="/trips"
             className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors"
           >
-            <FileCheck2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="hidden xs:inline">Open Reconciliation</span>
-            <span className="xs:hidden">Reconcile</span>
+            <Truck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="hidden xs:inline">Delivery Trips</span>
+            <span className="xs:hidden">Trips</span>
           </Link>
         </div>
       </div>
@@ -446,11 +446,11 @@ export function DispatchDeckClient({ initialTrips }: DispatchDeckClientProps) {
 
                     {hasGps && (
                       <Link
-                        href="/reconciliation"
+                        href="/trips"
                         className="h-8 inline-flex items-center gap-1 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
-                        title="Proceed to Reconciliation"
+                        title="View Trip in Master Registry & Record Actual KM"
                       >
-                        <span>Reconcile</span>
+                        <span>View in Trips</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     )}

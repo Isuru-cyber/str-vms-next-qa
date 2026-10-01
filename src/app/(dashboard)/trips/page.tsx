@@ -22,6 +22,8 @@ export default async function TripsPage() {
         },
       },
     };
+  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
+    where.id = -1;
   }
 
   let trips: any[] = [];
@@ -61,5 +63,7 @@ export default async function TripsPage() {
     console.error("Error loading delivery trips:", error);
   }
 
-  return <TripsRegistry initialTrips={trips} />;
+  const canEnterOdometer = can(user, "enter_odometer") || isAdmin(user);
+
+  return <TripsRegistry initialTrips={trips} canEnterOdometer={canEnterOdometer} />;
 }

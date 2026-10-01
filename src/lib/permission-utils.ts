@@ -44,6 +44,7 @@ export const ALL_SYSTEM_PERMISSIONS: PermissionDefinition[] = [
 
   // 5. Delivery Trips Registry
   { key: "view_trips", name: "View Delivery Trips", description: "View full registry of active and historical trips and manifest details", module: "Trips" },
+  { key: "enter_odometer", name: "Enter Actual KM / Odometer", description: "Record driver running sheet actual distance and variance reason", module: "Trips" },
   { key: "delete_trips", name: "Cancel / Abort Trips", description: "Permanently cancel or abort active delivery trips", module: "Trips", isSuperAdminOnly: true },
 
   // 6. Reconciliation & POD
@@ -88,6 +89,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     "issue_gate_pass",
     "dispatch_audit",
     "view_trips",
+    "enter_odometer",
     "view_reconciliation",
     "manage_pod",
     "finalize_reconciliation",
@@ -114,6 +116,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     "issue_gate_pass",
     "dispatch_audit",
     "view_trips",
+    "enter_odometer",
     "view_reconciliation",
     "manage_pod",
     "view_fleet",
@@ -131,6 +134,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     "dispatch_trips",
     "issue_gate_pass",
     "view_trips",
+    "enter_odometer",
     "view_fleet",
     "view_locations",
   ],

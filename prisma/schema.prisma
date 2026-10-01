@@ -340,6 +340,8 @@ model DeliveryTrip {
   routeId           Int?      @map("route_id")
   plannedKm         Decimal?  @default(0.00) @map("planned_km") @db.Decimal(8, 2)
   actualKm          Decimal?  @map("actual_km") @db.Decimal(8, 2)
+  varianceKm        Decimal?  @map("variance_km") @db.Decimal(8, 2)
+  varianceReason    String?   @map("variance_reason") @db.VarChar(255)
   paymentBasis      String?   @map("payment_basis") @db.VarChar(50)
   standardCost      Decimal?  @map("standard_cost") @db.Decimal(10, 2)
   estimatedCost     Decimal?  @map("estimated_cost") @db.Decimal(10, 2)
