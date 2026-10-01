@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   Truck,
   Search,
-  ArrowRight,
   User,
   Layers,
   CheckCircle2,
@@ -350,78 +349,78 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
   const modalVariance = !isNaN(modalActualKm) ? modalActualKm - modalPlannedKm : null;
 
   return (
-    <div className="space-y-3 w-full max-w-[1600px] mx-auto pb-16 px-1 sm:px-3">
-      {/* Slim Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 pt-1">
-        <div className="flex items-center gap-2">
-          <Truck className="w-5 h-5 text-indigo-600" />
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 tracking-tight">
-              Delivery Trips Registry
-            </h1>
-            <p className="text-[11px] text-gray-500">
-              Trip allocation, dispatch tracking, and actual odometer distance logging
-            </p>
+    <div className="space-y-2.5 w-full max-w-[1600px] mx-auto pb-16 px-1 sm:px-3">
+      {/* Slim Top Bar: KPI Summary & Action Buttons in a Single Line */}
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-2xs">
+        {/* Slim KPI Cards in one line */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Total Trips */}
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Total Trips
+            </span>
+            <span className="text-sm font-bold text-gray-900 tabular-nums">
+              {trips.length}
+            </span>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="h-8 inline-flex items-center gap-1.5 px-2.5 sm:px-3 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span className="hidden xs:inline">Export Excel</span>
-            <span className="xs:hidden">Excel</span>
-          </button>
+          {/* Allocated / Planning */}
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-indigo-50/70 border border-indigo-200/80">
+            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+              Allocated / Planning
+            </span>
+            <span className="text-sm font-bold text-indigo-700 tabular-nums">
+              {countAllocated}
+            </span>
+          </div>
 
-          <Link
-            href="/allocations/fg/combine"
-            className="h-8 inline-flex items-center gap-1.5 px-2.5 sm:px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
-          >
-            <Layers className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden xs:inline">Combine Workbench</span>
-            <span className="xs:hidden">Combine</span>
-          </Link>
-        </div>
-      </div>
+          {/* Dispatched / On Road */}
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-50/70 border border-blue-200/80">
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+              Dispatched / On Road
+            </span>
+            <span className="text-sm font-bold text-blue-700 tabular-nums">
+              {countDispatched}
+            </span>
+          </div>
 
-      {/* KPI Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-            Total Trips
-          </span>
-          <p className="text-xl font-bold text-gray-900 tabular-nums mt-0.5">{trips.length}</p>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-          <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
-            Allocated / Planning
-          </span>
-          <p className="text-xl font-bold text-indigo-600 tabular-nums mt-0.5">{countAllocated}</p>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-          <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-            Dispatched / On Road
-          </span>
-          <p className="text-xl font-bold text-blue-600 tabular-nums mt-0.5">{countDispatched}</p>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-          <div className="flex items-center justify-between">
+          {/* Completed Trips */}
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-50/70 border border-emerald-200/80">
             <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
               Completed Trips
             </span>
+            <span className="text-sm font-bold text-emerald-600 tabular-nums">
+              {countCompleted}
+            </span>
             {countPendingKm > 0 && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200" title="Trips waiting for running sheet actual KM">
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 ml-1"
+                title="Trips waiting for running sheet actual KM"
+              >
                 {countPendingKm} Needs KM
               </span>
             )}
           </div>
-          <p className="text-xl font-bold text-emerald-600 tabular-nums mt-0.5">{countCompleted}</p>
+        </div>
+
+        {/* Action Buttons: Export Excel and Combine Workbench on the same line */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>Export Excel</span>
+          </button>
+
+          <Link
+            href="/allocations/fg/combine"
+            className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+          >
+            <Layers className="w-3.5 h-3.5 shrink-0" />
+            <span>Combine Workbench</span>
+          </Link>
         </div>
       </div>
 
@@ -542,20 +541,22 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
               <tr>
-                <th className="py-3 px-3.5">Trip Number</th>
-                <th className="py-3 px-3 text-center">Status</th>
-                <th className="py-3 px-3.5">Vehicle</th>
-                <th className="py-3 px-3.5">Driver</th>
-                <th className="py-3 px-3.5">Route Corridor</th>
-                <th className="py-3 px-3 text-center">Requests</th>
-                <th className="py-3 px-3.5 text-right">Distance (Planned / Actual)</th>
-                <th className="py-3 px-3.5 text-right">Workflow Action</th>
+                <th className="py-2.5 px-3">Trip Number</th>
+                <th className="py-2.5 px-3">Date</th>
+                <th className="py-2.5 px-3 text-center">Status</th>
+                <th className="py-2.5 px-3">Vehicle</th>
+                <th className="py-2.5 px-3">Driver</th>
+                <th className="py-2.5 px-3">Route Corridor</th>
+                <th className="py-2.5 px-3 text-center">Requests</th>
+                <th className="py-2.5 px-3 text-right">Planned (KM)</th>
+                <th className="py-2.5 px-3 text-right">Actual (KM)</th>
+                <th className="py-2.5 px-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {visibleTrips.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-400">
+                  <td colSpan={10} className="p-8 text-center text-gray-400">
                     No trips match the selected criteria.
                   </td>
                 </tr>
@@ -573,59 +574,64 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
 
                   return (
                     <tr key={t.id} className="hover:bg-gray-50/80 transition-colors">
-                      {/* Trip Number & Date */}
-                      <td className="py-3 px-3.5">
-                        <span className="font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-lg tracking-tight inline-block">
-                          {t.tripNo}
-                        </span>
-                        <span className="block text-[11px] text-gray-400 mt-1 tabular-nums">
-                          {new Date(t.createdAt).toLocaleDateString()}
-                        </span>
-                        {t.gatePasses && t.gatePasses.length > 0 && (
-                          <div className="flex items-center gap-1 mt-1 max-w-[200px] truncate">
-                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 tabular-nums">
+                      {/* Trip Number */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg tracking-tight inline-block">
+                            {t.tripNo}
+                          </span>
+                          {t.gatePasses && t.gatePasses.length > 0 && (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 tabular-nums shrink-0"
+                              title={`Gate Pass: ${t.gatePasses.map((g) => g.gatePassNo).join(", ")}`}
+                            >
                               GP: {t.gatePasses[0].gatePassNo}
+                              {t.gatePasses.length > 1 && ` (+${t.gatePasses.length - 1})`}
                             </span>
-                            {t.gatePasses.length > 1 && (
-                              <span className="text-[10px] text-gray-500 font-medium">
-                                +{t.gatePasses.length - 1}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Date (Separate dedicated column) */}
+                      <td className="py-2.5 px-3 text-xs text-gray-600 font-medium tabular-nums whitespace-nowrap">
+                        {new Date(t.createdAt).toLocaleDateString("en-GB")}
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         <StatusBadge status={t.status} />
                       </td>
 
                       {/* Vehicle */}
-                      <td className="py-3 px-3.5">
-                        <div className="flex items-center gap-1.5 font-bold text-gray-900 tracking-tight">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 font-bold text-gray-900 text-xs">
                           <Truck className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                           <span>{t.vehicle?.vehicleNumber || "Unassigned"}</span>
+                          {t.vehicle?.vehicleType && (
+                            <span className="text-[10px] font-normal text-gray-500">
+                              ({t.vehicle.vehicleType})
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[10px] text-gray-500">
-                          {t.vehicle?.vehicleType || "General"}
-                        </span>
                       </td>
 
                       {/* Driver */}
-                      <td className="py-3 px-3.5">
-                        <div className="flex items-center gap-1.5 text-gray-800 font-medium">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-gray-800 text-xs">
                           <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                          <span>{t.driver?.name || "Unassigned"}</span>
+                          <span className="font-medium">{t.driver?.name || "Unassigned"}</span>
+                          {t.driver?.mobile && (
+                            <span className="text-[11px] text-gray-400 tabular-nums">
+                              · {t.driver.mobile}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[11px] text-gray-500 tabular-nums">
-                          {t.driver?.mobile || "-"}
-                        </span>
                       </td>
 
-                      {/* Route Corridor (Max-width with truncate & hover tooltip) */}
-                      <td className="py-3 px-3.5 max-w-[220px] lg:max-w-[280px]">
+                      {/* Route Corridor (Extended width) */}
+                      <td className="py-2.5 px-3 min-w-[200px] max-w-[340px] lg:max-w-[420px]">
                         <span
-                          className="truncate font-medium text-gray-800 block"
+                          className="truncate font-medium text-gray-800 text-xs block"
                           title={t.route?.routeName || "Consolidated Multi-Stop Corridor"}
                         >
                           {t.route?.routeName || "Consolidated Multi-Stop Corridor"}
@@ -633,67 +639,54 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                       </td>
 
                       {/* Requests Cargo */}
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 tabular-nums">
                           {t.tripRequests.length} cargo
                         </span>
                         {totalBoxes > 0 && (
-                          <span className="block text-[10px] text-gray-400 mt-0.5 tabular-nums">
-                            {totalBoxes} boxes
+                          <span className="ml-1.5 text-[11px] text-gray-500 tabular-nums">
+                            ({totalBoxes} bxs)
                           </span>
                         )}
                       </td>
 
-                      {/* Distance (Planned, Actual, Variance) */}
-                      <td className="py-3 px-3.5 text-right tabular-nums">
-                        <div className="space-y-0.5">
-                          <div className="text-[11px] text-gray-500">
-                            Planned: <span className="font-semibold text-gray-700">{formatNumber(plannedKmVal, 1)} KM</span>
-                          </div>
-
-                          {hasActualKm ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <span className="font-bold text-gray-900 text-xs">
-                                Actual: {formatNumber(actualKmVal, 1)} KM
-                              </span>
-                              {varianceVal !== null && (
-                                <span
-                                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                                    varianceVal > 10
-                                      ? "bg-amber-100 text-amber-800 border border-amber-300"
-                                      : varianceVal >= 0
-                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                      : "bg-blue-100 text-blue-800 border border-blue-300"
-                                  }`}
-                                  title={t.varianceReason ? `Reason: ${t.varianceReason}` : "Distance variance"}
-                                >
-                                  {varianceVal >= 0 ? `+${varianceVal.toFixed(1)}` : varianceVal.toFixed(1)} KM
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="inline-flex items-center text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-semibold">
-                              ⚠️ KM Pending
-                            </span>
-                          )}
-                        </div>
+                      {/* Planned KM */}
+                      <td className="py-2.5 px-3 text-right text-xs text-gray-700 font-medium tabular-nums whitespace-nowrap">
+                        {formatNumber(plannedKmVal, 1)} KM
                       </td>
 
-                      {/* Workflow Actions */}
-                      <td className="py-3 px-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Workbench button for planning/allocated */}
-                          {["ASSIGNED", "ALLOCATED"].includes(t.status) && (
-                            <Link
-                              href="/allocations/fg/combine"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
-                              title="Open in Combine Workbench"
-                            >
-                              <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                              <span>Workbench</span>
-                            </Link>
-                          )}
+                      {/* Actual KM */}
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap tabular-nums">
+                        {hasActualKm ? (
+                          <div className="inline-flex items-center gap-1.5 justify-end">
+                            <span className="font-bold text-gray-900 text-xs">
+                              {formatNumber(actualKmVal, 1)} KM
+                            </span>
+                            {varianceVal !== null && (
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                  varianceVal > 10
+                                    ? "bg-amber-100 text-amber-800 border border-amber-300"
+                                    : varianceVal >= 0
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                    : "bg-blue-100 text-blue-800 border border-blue-300"
+                                }`}
+                                title={t.varianceReason ? `Reason: ${t.varianceReason}` : "Distance variance"}
+                              >
+                                {varianceVal >= 0 ? `+${varianceVal.toFixed(1)}` : varianceVal.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">
+                            ⚠️ Pending
+                          </span>
+                        )}
+                      </td>
 
+                      {/* Action */}
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           {/* Enter KM Button for Dispatched & Completed Trips */}
                           {canEnterOdometer &&
                             ["DISPATCHED", "READY_FOR_LOADING", "GATE_PASS_ISSUED", "IN_TRANSIT", "COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(
@@ -702,7 +695,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                               <button
                                 type="button"
                                 onClick={() => openKmModal(t)}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer ${
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer ${
                                   hasActualKm
                                     ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200"
                                     : "bg-amber-600 hover:bg-amber-700 text-white"
@@ -715,22 +708,12 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                             )}
 
                           {/* Final Completed Indicator */}
-                          {["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(t.status) && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(t.status) && hasActualKm && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               <span>Done</span>
                             </span>
                           )}
-
-                          {/* Manifest Link */}
-                          <Link
-                            href={`/trips/${t.id}`}
-                            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-indigo-50 text-gray-700 hover:text-indigo-600 transition-colors"
-                            title="View Trip Manifest"
-                          >
-                            <span>Manifest</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
                         </div>
                       </td>
                     </tr>
