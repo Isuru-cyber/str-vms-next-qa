@@ -28,6 +28,10 @@ export async function POST(request: NextRequest) {
     const {
       vehicleNumber,
       vehicleType,
+      vehicleCategory,
+      ownershipType,
+      transporterName,
+      status = "AVAILABLE",
       paymentBasis = "KM_BASED",
       fuelConsumptionKml = 10,
       runningCostPerKm = 20.5,
@@ -53,6 +57,9 @@ export async function POST(request: NextRequest) {
       data: {
         vehicleNumber: String(vehicleNumber).trim(),
         vehicleType: String(vehicleType).trim(),
+        vehicleCategory: vehicleCategory ? String(vehicleCategory).trim() : "Lorry",
+        ownershipType: ownershipType ? String(ownershipType).trim() : (paymentBasis === "ADHOC" ? "ADHOC" : "COMMERCIAL"),
+        transporterName: transporterName ? String(transporterName).trim() : null,
         paymentBasis,
         fuelConsumptionKml: parseFloat(fuelConsumptionKml) || 0,
         runningCostPerKm: parseFloat(runningCostPerKm) || 0,
@@ -65,7 +72,7 @@ export async function POST(request: NextRequest) {
         maxVolumeCbm: parseFloat(maxVolumeCbm) || 0,
         defaultLocationId: defaultLocationId ? parseInt(defaultLocationId, 10) : null,
         operationCategoryId: operationCategoryId ? parseInt(operationCategoryId, 10) : null,
-        status: "AVAILABLE",
+        status: status || "AVAILABLE",
         active: 1,
       },
     });
@@ -94,6 +101,10 @@ export async function PUT(request: NextRequest) {
     const updateData: any = {};
     if (data.vehicleNumber !== undefined) updateData.vehicleNumber = String(data.vehicleNumber).trim();
     if (data.vehicleType !== undefined) updateData.vehicleType = String(data.vehicleType).trim();
+    if (data.vehicleCategory !== undefined) updateData.vehicleCategory = String(data.vehicleCategory).trim();
+    if (data.ownershipType !== undefined) updateData.ownershipType = String(data.ownershipType).trim();
+    else if (data.paymentBasis === "ADHOC") updateData.ownershipType = "ADHOC";
+    if (data.transporterName !== undefined) updateData.transporterName = data.transporterName ? String(data.transporterName).trim() : null;
     if (data.paymentBasis !== undefined) updateData.paymentBasis = data.paymentBasis;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.active !== undefined) updateData.active = data.active ? 1 : 0;

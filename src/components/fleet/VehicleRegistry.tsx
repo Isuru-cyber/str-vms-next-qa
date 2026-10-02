@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
   Loader2,
+  Filter,
 } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCurrency } from '@/lib/utils';
@@ -30,6 +31,7 @@ export function VehicleRegistry({
   const router = useRouter();
   const [vehicles, setVehicles] = useState(initialVehicles);
   const [search, setSearch] = useState('');
+  const [basisFilter, setBasisFilter] = useState<'ALL' | 'KM_BASED' | 'FIXED' | 'ADHOC'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<any>(null);
 
@@ -119,7 +121,8 @@ export function VehicleRegistry({
     setDefaultLocationId(v.defaultLocationId ? String(v.defaultLocationId) : (v.defaultLocation?.id ? String(v.defaultLocation.id) : ''));
     setPayloadKg(String(v.maxPayloadKg || '2000.00'));
     setVolumeCbm(String(v.maxVolumeCbm || '15.00'));
-    setBasis(v.paymentBasis || 'KM_BASED');
+    const isAdhoc = v.ownershipType === 'ADHOC' || v.paymentBasis === 'ADHOC';
+    setBasis(isAdhoc ? 'ADHOC' : (v.paymentBasis === 'FIXED' ? 'FIXED' : 'KM_BASED'));
     setStatus(v.status || 'AVAILABLE');
 
     setMonthlyRent(String(v.monthlyFixedRate || '0'));
@@ -147,6 +150,7 @@ export function VehicleRegistry({
         maxPayloadKg: parseFloat(payloadKg) || 0,
         maxVolumeCbm: parseFloat(volumeCbm) || 0,
         paymentBasis: basis,
+        ownershipType: basis === 'ADHOC' ? 'ADHOC' : 'COMMERCIAL',
         status,
         monthlyFixedRate: basis === 'FIXED' ? (parseFloat(monthlyRent) || 0) : 0,
         monthlyKmLimit: basis === 'FIXED' ? (parseInt(limitKm, 10) || 0) : 0,
@@ -199,13 +203,37 @@ export function VehicleRegistry({
     }
   };
 
-  const filteredVehicles = vehicles.filter(
-    (v) =>
-      v.vehicleNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      v.vehicleType?.toLowerCase().includes(search.toLowerCase()) ||
-      v.operationCategory?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      v.defaultLocation?.locationName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredVehicles = vehicles.filter((v) => {
+    // 1. Search Query
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matchPlate = v.vehicleNumber?.toLowerCase().includes(q);
+      const matchType = v.vehicleType?.toLowerCase().includes(q);
+      const matchCategory = v.vehicleCategory?.toLowerCase().includes(q);
+      const matchTransporter = v.transporterName?.toLowerCase().includes(q);
+      const matchOp = v.operationCategory?.name?.toLowerCase().includes(q);
+      const matchLoc = v.defaultLocation?.locationName?.toLowerCase().includes(q);
+      if (!matchPlate && !matchType && !matchCategory && !matchTransporter && !matchOp && !matchLoc) {
+        return false;
+      }
+    }
+
+    // 2. Payment Basis Filter
+    if (basisFilter !== 'ALL') {
+      const isAdhoc = v.ownershipType === 'ADHOC' || v.paymentBasis === 'ADHOC';
+      const isFixed = v.paymentBasis === 'FIXED';
+
+      if (basisFilter === 'ADHOC') {
+        if (!isAdhoc) return false;
+      } else if (basisFilter === 'FIXED') {
+        if (!isFixed || isAdhoc) return false;
+      } else if (basisFilter === 'KM_BASED') {
+        if (isFixed || isAdhoc) return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <div className="flex flex-col space-y-2.5 w-full min-h-0">
@@ -217,11 +245,26 @@ export function VehicleRegistry({
             <span>Fleet Vehicles</span>
           </h1>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold tabular-nums">
-            {vehicles.length} Vehicles
+            {basisFilter !== 'ALL' || search ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length} Vehicles
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Payment Basis Filter */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+            <Filter className="w-3.5 h-3.5 text-slate-400 ml-1" />
+            <select
+              value={basisFilter}
+              onChange={(e) => setBasisFilter(e.target.value as any)}
+              className="text-xs font-bold bg-transparent text-slate-700 px-1 py-0.5 focus:outline-none cursor-pointer"
+            >
+              <option value="ALL">All Payment Bases</option>
+              <option value="KM_BASED">KM-BASED (Commercial)</option>
+              <option value="FIXED">FIXED CONTRACT</option>
+              <option value="ADHOC">KM-BASED - AH (Outside / Ad-Hoc)</option>
+            </select>
+          </div>
+
           <div className="relative w-36 sm:w-48 md:w-56">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -313,11 +356,19 @@ export function VehicleRegistry({
 
                       {/* Payment Basis */}
                       <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isFixed ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {isFixed ? 'FIXED CONTRACT' : 'KM-BASED'}
-                        </span>
+                        {v.ownershipType === 'ADHOC' || v.paymentBasis === 'ADHOC' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                            KM-BASED - AH
+                          </span>
+                        ) : isFixed ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                            FIXED CONTRACT
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                            KM-BASED
+                          </span>
+                        )}
                       </td>
 
                       {/* Monthly Rent */}
@@ -602,6 +653,7 @@ export function VehicleRegistry({
                     >
                       <option value="FIXED">Fixed Monthly Rental (+ Extra KM Tariff)</option>
                       <option value="KM_BASED">KM Based (Running + Fuel)</option>
+                      <option value="ADHOC">KM-BASED - AH (Outside / Ad-Hoc)</option>
                     </select>
                   </div>
 

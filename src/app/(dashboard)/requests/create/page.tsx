@@ -32,10 +32,13 @@ export default async function RequestCreatePage() {
     }),
     prisma.masterData.findMany({
       where: {
-        category: { code: "VEHICLE_TYPE" },
+        category: { code: { in: ["VEHICLE_TYPE", "VEHICLE_CATEGORY"] } },
         active: 1,
       },
-      orderBy: { sortOrder: "asc" },
+      include: {
+        category: { select: { code: true, name: true } },
+      },
+      orderBy: [{ categoryId: "desc" }, { sortOrder: "asc" }],
     }),
   ]);
 

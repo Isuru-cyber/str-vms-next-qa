@@ -51,6 +51,8 @@ interface VehicleTypeOption {
   id: number;
   code: string;
   name: string;
+  categoryId?: number;
+  category?: { code: string; name: string };
 }
 
 interface RequestCreateWizardProps {
@@ -876,7 +878,7 @@ export function RequestCreateWizard({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Preferred Vehicle Type
+                Preferred Vehicle Type / Category
               </label>
               <select
                 value={vehicleTypeId}
@@ -884,11 +886,26 @@ export function RequestCreateWizard({
                 className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-lg p-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
               >
                 <option value="">-- Any Fleet Vehicle --</option>
-                {vehicleTypes.map((vt) => (
-                  <option key={vt.id} value={vt.id}>
-                    {vt.name}
-                  </option>
-                ))}
+                {vehicleTypes.some((vt) => vt.category?.code === "VEHICLE_CATEGORY") && (
+                  <optgroup label="Vehicle Categories (Outside / General)">
+                    {vehicleTypes
+                      .filter((vt) => vt.category?.code === "VEHICLE_CATEGORY")
+                      .map((vt) => (
+                        <option key={vt.id} value={vt.id}>
+                          {vt.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                <optgroup label="Commercial Fleet Types (By Spec / Size)">
+                  {vehicleTypes
+                    .filter((vt) => vt.category?.code !== "VEHICLE_CATEGORY")
+                    .map((vt) => (
+                      <option key={vt.id} value={vt.id}>
+                        {vt.name}
+                      </option>
+                    ))}
+                </optgroup>
               </select>
             </div>
 
