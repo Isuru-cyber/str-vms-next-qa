@@ -16,22 +16,23 @@ import {
   RotateCcw as UndoIcon,
   KeyRound,
   FileCheck2,
+  AlertCircle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 interface CombineTripsRegistryClientProps {
-  initialTrips: any[];
-  vehicles: any[];
-  drivers: any[];
-  routes: any[];
+  initialTrips?: any[];
+  vehicles?: any[];
+  drivers?: any[];
+  routes?: any[];
 }
 
 export function CombineTripsRegistryClient({
-  initialTrips,
-  vehicles,
-  drivers,
-  routes,
+  initialTrips = [],
+  vehicles = [],
+  drivers = [],
+  routes = [],
 }: CombineTripsRegistryClientProps) {
   const router = useRouter();
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   DollarSign,
   Truck,
+  Combine,
   Package,
   Calendar,
   Fuel,
