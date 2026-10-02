@@ -156,11 +156,11 @@ export function ReportsHubClient({
       const savings = isAdhoc
         ? {
             standalone_total_cost: costComp.total_trip_cost,
-            combined_trip_cost: costComp.total_trip_cost,
+            actual_combined_cost: costComp.total_trip_cost,
             net_savings: 0,
             savings_pct: 0,
-            is_beneficial: true,
-            requests_breakdown: [],
+            is_consolidated: false,
+            standalone_breakdown: [],
           }
         : CostCalculator.calculateConsolidationSavings(costComp.total_trip_cost, v, linkedReqs, dieselRate);
 

@@ -263,12 +263,12 @@ export function CombineWorkbenchClient({
 
   const consolidationSavings = isAdhoc
     ? {
-        standalone_total: Number(adhocAgreedCost) || 0,
-        combined_cost: Number(adhocAgreedCost) || 0,
+        standalone_total_cost: Number(adhocAgreedCost) || 0,
+        actual_combined_cost: Number(adhocAgreedCost) || 0,
         net_savings: 0,
-        savings_percentage: 0,
-        is_beneficial: true,
-        requests_breakdown: [],
+        savings_pct: 0,
+        is_consolidated: false,
+        standalone_breakdown: [],
       }
     : CostCalculator.calculateConsolidationSavings(
         costBreakdown.total_trip_cost,
