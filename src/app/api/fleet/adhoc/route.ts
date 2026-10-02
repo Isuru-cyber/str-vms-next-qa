@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const vehicles = await prisma.vehicle.findMany({
       where,
-      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      orderBy: [{ active: "desc" }, { id: "desc" }],
       include: {
         drivers: {
           where: includeInactive ? undefined : { active: 1 },

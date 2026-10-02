@@ -19,31 +19,44 @@ export default async function AdhocFleetPage() {
   let vehicleCategories: any[] = [];
 
   try {
-    const [vehs, vCats] = await Promise.all([
-      prisma.vehicle.findMany({
-        where: {
-          ownershipType: "ADHOC",
+    vehicles = await prisma.vehicle.findMany({
+      where: {
+        ownershipType: "ADHOC",
+      },
+      orderBy: [{ active: "desc" }, { id: "desc" }],
+      include: {
+        drivers: {
+          where: { active: 1 },
+          take: 1,
         },
-        orderBy: [{ active: "desc" }, { updatedAt: "desc" }],
-        include: {
-          drivers: {
-            where: { active: 1 },
-            take: 1,
-          },
-        },
-      }),
-      prisma.masterData.findMany({
-        where: {
-          category: { code: "VEHICLE_CATEGORY" },
-          active: 1,
-        },
-        orderBy: { sortOrder: "asc" },
-      }),
-    ]);
-    vehicles = vehs;
-    vehicleCategories = vCats;
+      },
+    });
   } catch (err) {
-    console.error("Error loading ad-hoc fleet data:", err);
+    console.error("Error loading ad-hoc vehicles:", err);
+    vehicles = [];
+  }
+
+  try {
+    vehicleCategories = await prisma.masterData.findMany({
+      where: {
+        category: { code: "VEHICLE_CATEGORY" },
+        active: 1,
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+  } catch (err) {
+    console.error("Error loading vehicle categories:", err);
+    vehicleCategories = [];
+  }
+
+  // Ensure fallback categories if none exist in DB yet
+  if (!vehicleCategories || vehicleCategories.length === 0) {
+    vehicleCategories = [
+      { id: 1, code: "LORRY", name: "Lorry" },
+      { id: 2, code: "BIKE", name: "Bike" },
+      { id: 3, code: "THREEWHEEL", name: "Threewheel" },
+      { id: 4, code: "VAN", name: "Van" },
+    ];
   }
 
   return (

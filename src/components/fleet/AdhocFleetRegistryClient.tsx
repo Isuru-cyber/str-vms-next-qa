@@ -52,6 +52,18 @@ export function AdhocFleetRegistryClient({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<AdhocVehicleItem | null>(null);
 
+  const categoriesList = useMemo(() => {
+    if (vehicleCategories && vehicleCategories.length > 0) {
+      return vehicleCategories;
+    }
+    return [
+      { id: 1, code: "LORRY", name: "Lorry" },
+      { id: 2, code: "BIKE", name: "Bike" },
+      { id: 3, code: "THREEWHEEL", name: "Threewheel" },
+      { id: 4, code: "VAN", name: "Van" },
+    ];
+  }, [vehicleCategories]);
+
   // Form Fields
   const [formVehNumber, setFormVehNumber] = useState("");
   const [formCategory, setFormCategory] = useState("Lorry");
@@ -69,7 +81,7 @@ export function AdhocFleetRegistryClient({
   const openAdd = () => {
     setEditingVehicle(null);
     setFormVehNumber("");
-    setFormCategory(vehicleCategories[0]?.name || "Lorry");
+    setFormCategory(categoriesList[0]?.name || "Lorry");
     setFormTransporter("");
     setFormDriverName("");
     setFormDriverMobile("");
@@ -230,7 +242,7 @@ export function AdhocFleetRegistryClient({
               className="text-xs font-bold bg-transparent text-slate-700 px-1 py-0.5 focus:outline-none cursor-pointer"
             >
               <option value="ALL">All Categories</option>
-              {vehicleCategories.map((cat) => (
+              {categoriesList.map((cat) => (
                 <option key={cat.id} value={cat.name}>
                   {cat.name}
                 </option>
@@ -457,7 +469,7 @@ export function AdhocFleetRegistryClient({
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold bg-white cursor-pointer"
                   >
-                    {vehicleCategories.map((cat) => (
+                    {categoriesList.map((cat) => (
                       <option key={cat.id} value={cat.name}>
                         {cat.name}
                       </option>
