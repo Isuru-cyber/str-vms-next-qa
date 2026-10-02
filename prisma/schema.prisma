@@ -204,6 +204,9 @@ model Vehicle {
   runningCostPerKm    Decimal?  @default(20.50) @map("running_cost_per_km") @db.Decimal(8, 2)
   profitPerKm         Decimal?  @default(15.00) @map("profit_per_km") @db.Decimal(8, 2)
   fixedCostPerDay     Decimal?  @default(1795.36) @map("fixed_cost_per_day") @db.Decimal(10, 2)
+  vehicleCategory     String?   @default("Lorry") @map("vehicle_category") @db.VarChar(50)
+  ownershipType       String?   @default("COMMERCIAL") @map("ownership_type") @db.VarChar(20)
+  transporterName     String?   @map("transporter_name") @db.VarChar(100)
   monthlyFixedRate    Decimal?  @default(0.00) @map("monthly_fixed_rate") @db.Decimal(12, 2)
   extraKmRate         Decimal?  @default(0.00) @map("extra_km_rate") @db.Decimal(8, 2)
 
@@ -223,8 +226,9 @@ model Driver {
   name            String    @db.VarChar(100)
   nic             String    @unique @db.VarChar(20)
   mobile          String    @db.VarChar(20)
-  licenseNumber   String    @map("license_number") @db.VarChar(50)
+  licenseNumber   String?   @map("license_number") @db.VarChar(50)
   licenseExpiry   DateTime? @map("license_expiry") @db.Date
+  driverType      String?   @default("COMMERCIAL") @map("driver_type") @db.VarChar(20)
   linkedVehicleId Int?      @map("linked_vehicle_id")
   linkedPlantId   Int?      @map("linked_plant_id")
   status          String    @default("AVAILABLE") @db.VarChar(20)

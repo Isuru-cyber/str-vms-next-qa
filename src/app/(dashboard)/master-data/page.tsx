@@ -6,9 +6,10 @@ export default async function MasterDataPage() {
   let vehicleTypes: any[] = [];
   let subOperations: any[] = [];
   let plants: any[] = [];
+  let vehicleCategories: any[] = [];
 
   try {
-    const [vTypes, sOps, pList] = await Promise.all([
+    const [vTypes, sOps, pList, vCats] = await Promise.all([
       prisma.masterData.findMany({
         where: { category: { code: "VEHICLE_TYPE" } },
         orderBy: { sortOrder: "asc" },
@@ -20,10 +21,15 @@ export default async function MasterDataPage() {
       prisma.plant.findMany({
         orderBy: { sortOrder: "asc" },
       }),
+      prisma.masterData.findMany({
+        where: { category: { code: "VEHICLE_CATEGORY" } },
+        orderBy: { sortOrder: "asc" },
+      }),
     ]);
     vehicleTypes = vTypes;
     subOperations = sOps;
     plants = pList;
+    vehicleCategories = vCats;
   } catch (e) {}
 
   return (
@@ -31,6 +37,7 @@ export default async function MasterDataPage() {
       initialVehicleTypes={JSON.parse(JSON.stringify(vehicleTypes))}
       initialSubOperations={JSON.parse(JSON.stringify(subOperations))}
       initialPlants={JSON.parse(JSON.stringify(plants))}
+      initialVehicleCategories={JSON.parse(JSON.stringify(vehicleCategories))}
     />
   );
 }

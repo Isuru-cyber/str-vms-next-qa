@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     if (auth.error) return auth.error;
     const user = auth.user;
 
-    const { requestId, requestIds, vehicleId, driverId, routeId, plannedKm, adminRemarks } = await req.json();
+    const { requestId, requestIds, vehicleId, driverId, routeId, plannedKm, adminRemarks, agreedCost } = await req.json();
 
     const targetRequestIds: number[] = Array.isArray(requestIds) && requestIds.length > 0
       ? requestIds.map(Number).filter((n) => !isNaN(n) && n > 0)
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       // Check vehicle and driver availability to prevent double-allocation
       const targetVeh = await tx.vehicle.findUnique({
         where: { id: Number(vehicleId) },
-        select: { id: true, status: true, vehicleNumber: true },
+        select: { id: true, status: true, vehicleNumber: true, paymentBasis: true, ownershipType: true },
       });
       if (!targetVeh || targetVeh.status !== "AVAILABLE") {
         throw new Error(`Vehicle ${targetVeh?.vehicleNumber || vehicleId} is not available (current status: '${targetVeh?.status || "UNKNOWN"}').`);
@@ -67,6 +67,12 @@ export async function POST(req: NextRequest) {
         throw new Error(`Driver ${targetDriver?.name || driverId} is not available (current status: '${targetDriver?.status || "UNKNOWN"}').`);
       }
 
+      const isAdhoc = targetVeh.ownershipType === "ADHOC" || targetVeh.paymentBasis === "ADHOC";
+      const paymentBasis = isAdhoc ? "ADHOC" : (targetVeh.paymentBasis || "KM_BASED");
+      const costValue = isAdhoc && agreedCost !== undefined && agreedCost !== null && agreedCost !== ""
+        ? Number(agreedCost)
+        : null;
+
       const tripNo = await generateNextTripNo(tx);
 
       const newTrip = await tx.deliveryTrip.create({
@@ -77,6 +83,11 @@ export async function POST(req: NextRequest) {
           routeId: Number(routeId),
           plannedKm: plannedKm ? Number(plannedKm) : 0,
           status: "ASSIGNED",
+          paymentBasis,
+          totalTripCost: costValue,
+          estimatedCost: costValue,
+          actualCost: costValue,
+          standardCost: costValue,
           adminRemarks: adminRemarks || null,
           tripRequests: {
             create: targetRequestIds.map((id, index) => ({

@@ -64,10 +64,14 @@ export default async function FgAllocationPage() {
                 OR: [
                   { defaultLocation: { plantId: { in: user.plantIds } } },
                   { drivers: { some: { linkedPlantId: { in: user.plantIds } } } },
+                  { ownershipType: "ADHOC" },
                 ],
               }
             : { id: -1 }
           : {}),
+      },
+      include: {
+        drivers: true,
       },
       orderBy: { vehicleNumber: "asc" },
     }),
@@ -76,7 +80,12 @@ export default async function FgAllocationPage() {
         active: 1,
         ...(!isAdmin(user)
           ? user.plantIds?.length
-            ? { linkedPlantId: { in: user.plantIds } }
+            ? {
+                OR: [
+                  { linkedPlantId: { in: user.plantIds } },
+                  { driverType: "ADHOC" },
+                ],
+              }
             : { id: -1 }
           : {}),
       },

@@ -137,10 +137,17 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
       status: trip.status || "ALLOCATED",
       planned_km: String(trip.plannedKm || 0),
       vehicle_number: trip.vehicle?.vehicleNumber || "Unassigned",
-      vehicle_type: trip.vehicle?.vehicleType || "Standard Fleet",
+      vehicle_type: trip.vehicle?.vehicleCategory || trip.vehicle?.vehicleType || "Standard Fleet",
       driver_name: trip.driver?.name || "Assigned Driver",
-      driver_nic: trip.driver?.nic || "N/A",
+      driver_nic: (trip.driver?.nic ? String(trip.driver.nic).trim() : null) || (trip as any)?.driverNic || (trip.driver?.licenseNumber ? String(trip.driver.licenseNumber).trim() : null) || "N/A",
+      drivernic: (trip.driver?.nic ? String(trip.driver.nic).trim() : null) || (trip as any)?.driverNic || "N/A",
+      driver_nic_id: (trip.driver?.nic ? String(trip.driver.nic).trim() : null) || (trip as any)?.driverNic || "N/A",
+      driver_nic_no: (trip.driver?.nic ? String(trip.driver.nic).trim() : null) || (trip as any)?.driverNic || "N/A",
+      driver_id: (trip.driver?.nic ? String(trip.driver.nic).trim() : null) || (trip as any)?.driverNic || "N/A",
+      nic: (trip.driver?.nic ? String(trip.driver.nic).trim() : null) || (trip as any)?.driverNic || "N/A",
       driver_mobile: trip.driver?.mobile || "N/A",
+      drivermobile: trip.driver?.mobile || "N/A",
+      driver_phone: trip.driver?.mobile || "N/A",
       driver_license: trip.driver?.licenseNumber || trip.driver?.license || "N/A",
       total_cbm: totalCbm.toFixed(2),
       total_kg: Math.round(totalWeight).toLocaleString(),
@@ -159,7 +166,7 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
     let subj = tpl.subject || "";
     let body = tpl.body || "";
     for (const [k, v] of Object.entries(placeholders)) {
-      const re = new RegExp(`\\{${k}\\}`, "gi");
+      const re = new RegExp(`\\{\\s*${k}\\s*\\}`, "gi");
       subj = subj.replace(re, v);
       body = body.replace(re, v);
     }

@@ -60,9 +60,9 @@ export async function PATCH(
     const plannedKmNum = Number(trip.plannedKm) || 0;
     const varianceKmNum = parsedActualKm - plannedKmNum;
 
-    // Recalculate trip costs based on actual KM
+    // Recalculate trip costs based on actual KM (only for contracted fleet, NOT for flat ad-hoc hires)
     let updatedCostBreakdown: any = null;
-    if (trip.vehicle) {
+    if (trip.vehicle && trip.paymentBasis !== "ADHOC" && trip.vehicle.ownershipType !== "ADHOC") {
       const dieselRate = Number(trip.dieselRateApplied) || 382.0;
       updatedCostBreakdown = CostCalculator.calculateTripCost(
         parsedActualKm,
@@ -83,6 +83,8 @@ export async function PATCH(
       updateData.runningCost = updatedCostBreakdown.running_cost;
       updateData.driverProfit = updatedCostBreakdown.driver_profit;
       updateData.totalTripCost = updatedCostBreakdown.total_trip_cost;
+    } else if (trip.paymentBasis === "ADHOC") {
+      updateData.actualCost = trip.totalTripCost ?? trip.actualCost;
     }
 
     const updatedTrip = await prisma.deliveryTrip.update({

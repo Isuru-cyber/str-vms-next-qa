@@ -138,6 +138,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           visible: can(user, "view_fleet"),
         },
         {
+          name: "Outside / Ad-Hoc",
+          href: "/fleet/adhoc",
+          icon: Truck,
+          visible: can(user, "view_fleet"),
+        },
+        {
           name: "Fleet Availability",
           href: "/fleet/availability",
           icon: CalendarDays,

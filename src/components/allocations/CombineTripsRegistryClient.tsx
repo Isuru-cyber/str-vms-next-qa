@@ -56,6 +56,8 @@ export function CombineTripsRegistryClient({
 
   // Create Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createFleetMode, setCreateFleetMode] = useState<"COMMERCIAL" | "ADHOC">("COMMERCIAL");
+  const [createAgreedCost, setCreateAgreedCost] = useState<string>("");
   const [modalVehicleId, setModalVehicleId] = useState("");
   const [modalDriverId, setModalDriverId] = useState("");
   const [modalRemarks, setModalRemarks] = useState("");
@@ -248,6 +250,8 @@ export function CombineTripsRegistryClient({
 
   // Open Create Modal
   const openCreateModal = () => {
+    setCreateFleetMode("COMMERCIAL");
+    setCreateAgreedCost("");
     setModalVehicleId("");
     setModalDriverId("");
     setModalRemarks("");
@@ -258,7 +262,8 @@ export function CombineTripsRegistryClient({
   const handleVehicleChange = (vId: string) => {
     setModalVehicleId(vId);
     if (vId) {
-      const linked = drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
+      const veh = vehicles.find((v: any) => String(v.id) === String(vId));
+      const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
       if (linked) {
         setModalDriverId(String(linked.id));
       }
@@ -267,9 +272,10 @@ export function CombineTripsRegistryClient({
 
   const isDriverAutoSelected = useMemo(() => {
     if (!modalVehicleId || !modalDriverId) return false;
-    const linked = drivers.find((d: any) => Number(d.linkedVehicleId) === Number(modalVehicleId));
+    const veh = vehicles.find((v: any) => String(v.id) === String(modalVehicleId));
+    const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(modalVehicleId));
     return linked ? String(linked.id) === String(modalDriverId) : false;
-  }, [modalVehicleId, modalDriverId, drivers]);
+  }, [modalVehicleId, modalDriverId, drivers, vehicles]);
 
   // Create Empty Trip
   const handleCreateCombine = async (e: React.FormEvent) => {
@@ -277,6 +283,13 @@ export function CombineTripsRegistryClient({
     if (!modalVehicleId || !modalDriverId) {
       alert("Please select vehicle and driver.");
       return;
+    }
+
+    if (createFleetMode === "ADHOC") {
+      if (!createAgreedCost || Number(createAgreedCost) <= 0) {
+        alert("Please enter a valid Agreed Hire Cost (LKR) for this outside / ad-hoc vehicle.");
+        return;
+      }
     }
 
     setSubmittingCreate(true);
@@ -289,6 +302,7 @@ export function CombineTripsRegistryClient({
           vehicleId: modalVehicleId,
           driverId: modalDriverId,
           adminRemarks: modalRemarks,
+          agreedCost: createFleetMode === "ADHOC" ? Number(createAgreedCost) : undefined,
         }),
       });
       const json = await res.json();
@@ -637,10 +651,52 @@ export function CombineTripsRegistryClient({
             </div>
 
             <form onSubmit={handleCreateCombine} className="p-6 space-y-4">
+              {/* Fleet Mode Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Fleet Classification <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateFleetMode("COMMERCIAL");
+                      setModalVehicleId("");
+                      setModalDriverId("");
+                      setCreateAgreedCost("");
+                    }}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      createFleetMode === "COMMERCIAL"
+                        ? "bg-white text-indigo-700 shadow-xs border border-slate-200/80"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Commercial Fleet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateFleetMode("ADHOC");
+                      setModalVehicleId("");
+                      setModalDriverId("");
+                    }}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      createFleetMode === "ADHOC"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Combine className="w-3.5 h-3.5" />
+                    <span>Outside / Ad-Hoc Hires</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Vehicle <span className="text-rose-500">*</span>
+                    {createFleetMode === "ADHOC" ? "Outside / Ad-Hoc Vehicle" : "Vehicle"} <span className="text-rose-500">*</span>
                   </label>
                   <select
                     required
@@ -648,10 +704,15 @@ export function CombineTripsRegistryClient({
                     onChange={(e) => handleVehicleChange(e.target.value)}
                     className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
-                    <option value="">-- Select Vehicle --</option>
-                    {vehicles.map((v) => (
+                    <option value="">-- Select {createFleetMode === "ADHOC" ? "Outside Vehicle" : "Vehicle"} --</option>
+                    {(createFleetMode === "ADHOC"
+                      ? vehicles.filter((v: any) => v.ownershipType === "ADHOC")
+                      : vehicles.filter((v: any) => v.ownershipType !== "ADHOC")
+                    ).map((v: any) => (
                       <option key={v.id} value={v.id}>
-                        {v.vehicleNumber} ({v.vehicleType})
+                        {createFleetMode === "ADHOC"
+                          ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})`
+                          : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})`}
                       </option>
                     ))}
                   </select>
@@ -675,14 +736,49 @@ export function CombineTripsRegistryClient({
                     className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="">-- Select Driver --</option>
-                    {drivers.map((d) => (
+                    {(createFleetMode === "ADHOC"
+                      ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
+                      : drivers.filter((d: any) => d.driverType !== "ADHOC")
+                    ).map((d: any) => (
                       <option key={d.id} value={d.id}>
-                        {d.name} ({d.mobile || "N/A"})
+                        {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+
+              {/* Outside / Ad-Hoc Agreed Hire Cost */}
+              {createFleetMode === "ADHOC" && (
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-amber-950 mb-0.5">
+                        Agreed Hire Cost (LKR) <span className="text-rose-500">*</span>
+                      </label>
+                      <p className="text-[11px] text-amber-700">
+                        Fixed total hire cost for this outside trip
+                      </p>
+                    </div>
+                    <div className="w-44">
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        required
+                        value={createAgreedCost}
+                        onChange={(e) => setCreateAgreedCost(e.target.value)}
+                        placeholder="e.g. 15000"
+                        className="w-full text-xs font-bold bg-white border border-amber-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[10.5px] text-amber-800 bg-amber-100/60 p-2 rounded-lg border border-amber-200/60 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>Outside hire flat rate. Commercial contract and diesel rates will not apply.</span>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">

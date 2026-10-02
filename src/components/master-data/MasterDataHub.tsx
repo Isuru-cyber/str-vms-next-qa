@@ -14,23 +14,27 @@ import {
   Loader2,
   Database,
   Building2,
+  Tag,
 } from "lucide-react";
 
 interface MasterDataHubProps {
   initialVehicleTypes: any[];
   initialSubOperations: any[];
   initialPlants?: any[];
+  initialVehicleCategories?: any[];
 }
 
 export function MasterDataHub({
   initialVehicleTypes = [],
   initialSubOperations = [],
   initialPlants = [],
+  initialVehicleCategories = [],
 }: MasterDataHubProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"VEHICLE_TYPE" | "SUB_OPERATION" | "PLANT">("VEHICLE_TYPE");
+  const [activeTab, setActiveTab] = useState<"VEHICLE_TYPE" | "VEHICLE_CATEGORY" | "SUB_OPERATION" | "PLANT">("VEHICLE_TYPE");
 
   const [vTypes, setVTypes] = useState(initialVehicleTypes);
+  const [vCategories, setVCategories] = useState(initialVehicleCategories);
   const [subOps, setSubOps] = useState(initialSubOperations);
   const [plants, setPlants] = useState(initialPlants);
 
@@ -161,6 +165,8 @@ export function MasterDataHub({
 
           if (activeTab === "VEHICLE_TYPE") {
             setVTypes((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
+          } else if (activeTab === "VEHICLE_CATEGORY") {
+            setVCategories((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
           } else {
             setSubOps((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
           }
@@ -176,6 +182,8 @@ export function MasterDataHub({
 
           if (activeTab === "VEHICLE_TYPE") {
             setVTypes((prev) => [...prev, data.data]);
+          } else if (activeTab === "VEHICLE_CATEGORY") {
+            setVCategories((prev) => [...prev, data.data]);
           } else {
             setSubOps((prev) => [...prev, data.data]);
           }
@@ -213,6 +221,8 @@ export function MasterDataHub({
 
       if (activeTab === "VEHICLE_TYPE") {
         setVTypes((prev) => prev.filter((i) => i.id !== id));
+      } else if (activeTab === "VEHICLE_CATEGORY") {
+        setVCategories((prev) => prev.filter((i) => i.id !== id));
       } else {
         setSubOps((prev) => prev.filter((i) => i.id !== id));
       }
@@ -223,7 +233,13 @@ export function MasterDataHub({
   };
 
   const currentList =
-    activeTab === "VEHICLE_TYPE" ? vTypes : activeTab === "SUB_OPERATION" ? subOps : plants;
+    activeTab === "VEHICLE_TYPE"
+      ? vTypes
+      : activeTab === "VEHICLE_CATEGORY"
+      ? vCategories
+      : activeTab === "SUB_OPERATION"
+      ? subOps
+      : plants;
   const filteredList = currentList.filter(
     (i) =>
       i.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -249,6 +265,21 @@ export function MasterDataHub({
             <span>Vehicle Types</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 tabular-nums">
               {vTypes.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("VEHICLE_CATEGORY")}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === "VEHICLE_CATEGORY"
+                ? "bg-white shadow-2xs text-blue-700"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Tag className="w-3.5 h-3.5" />
+            <span>Vehicle Categories</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 tabular-nums">
+              {vCategories.length}
             </span>
           </button>
           <button
@@ -301,7 +332,7 @@ export function MasterDataHub({
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>{activeTab === "PLANT" ? "Add Plant" : "Add Option"}</span>
+            <span>{activeTab === "PLANT" ? "Add Plant" : activeTab === "VEHICLE_CATEGORY" ? "Add Category" : "Add Option"}</span>
           </button>
         </div>
       </div>
@@ -315,6 +346,8 @@ export function MasterDataHub({
                 <th className="py-2.5 px-3">
                   {activeTab === "VEHICLE_TYPE"
                     ? "Vehicle Type"
+                    : activeTab === "VEHICLE_CATEGORY"
+                    ? "Category Name"
                     : activeTab === "SUB_OPERATION"
                     ? "Sub-Operation"
                     : "Plant Name"}
@@ -332,7 +365,7 @@ export function MasterDataHub({
                     <th className="py-2.5 px-3 text-center">Business Group</th>
                     <th className="py-2.5 px-3 w-28 text-center">Order</th>
                   </>
-                ) : (
+                ) : activeTab === "VEHICLE_CATEGORY" ? null : (
                   <th className="py-2.5 px-3 min-w-[200px]">Description</th>
                 )}
                 <th className="py-2.5 px-3 w-24 text-center">Status</th>
@@ -343,7 +376,7 @@ export function MasterDataHub({
               {filteredList.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={activeTab === "VEHICLE_TYPE" ? 8 : activeTab === "PLANT" ? 6 : 5}
+                    colSpan={activeTab === "VEHICLE_TYPE" ? 8 : activeTab === "PLANT" ? 6 : activeTab === "VEHICLE_CATEGORY" ? 4 : 5}
                     className="py-12 text-center text-slate-400"
                   >
                     <Database className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -388,7 +421,7 @@ export function MasterDataHub({
                           #{item.sortOrder ?? "-"}
                         </td>
                       </>
-                    ) : (
+                    ) : activeTab === "VEHICLE_CATEGORY" ? null : (
                       <td className="py-2 px-3 text-slate-600 text-[11px]">
                         {item.description || <span className="text-slate-300">-</span>}
                       </td>
@@ -441,11 +474,15 @@ export function MasterDataHub({
                 {editingItem
                   ? activeTab === "VEHICLE_TYPE"
                     ? `Edit Vehicle Type: ${editingItem.name}`
+                    : activeTab === "VEHICLE_CATEGORY"
+                    ? `Edit Vehicle Category: ${editingItem.name}`
                     : activeTab === "PLANT"
                     ? `Edit Plant: ${editingItem.name}`
                     : `Edit Sub-Operation: ${editingItem.name}`
                   : activeTab === "VEHICLE_TYPE"
                   ? "Add New Vehicle Type"
+                  : activeTab === "VEHICLE_CATEGORY"
+                  ? "Add New Vehicle Category"
                   : activeTab === "PLANT"
                   ? "Add New Plant"
                   : "Add New Sub-Operation"}
@@ -475,6 +512,8 @@ export function MasterDataHub({
                         ? "e.g. STR4"
                         : activeTab === "VEHICLE_TYPE"
                         ? "e.g. 10_FT_LORRY"
+                        : activeTab === "VEHICLE_CATEGORY"
+                        ? "e.g. THREEWHEEL"
                         : "e.g. SAMPLE"
                     }
                     className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold uppercase bg-slate-50 focus:bg-white transition-all"
@@ -495,6 +534,8 @@ export function MasterDataHub({
                         ? "e.g. STR4"
                         : activeTab === "VEHICLE_TYPE"
                         ? "e.g. 10 ft"
+                        : activeTab === "VEHICLE_CATEGORY"
+                        ? "e.g. Threewheel"
                         : "e.g. Raw Material"
                     }
                     className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold bg-white transition-all"

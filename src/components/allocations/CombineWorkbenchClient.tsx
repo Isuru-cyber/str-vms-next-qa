@@ -101,6 +101,9 @@ export function CombineWorkbenchClient({
   const [plannedKm, setPlannedKm] = useState<number>(
     Number(trip?.plannedKm) || 0
   );
+  const [adhocAgreedCost, setAdhocAgreedCost] = useState<number | string>(
+    Number(trip?.totalTripCost ?? trip?.actualCost ?? trip?.estimatedCost ?? 0)
+  );
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -233,25 +236,50 @@ export function CombineWorkbenchClient({
     : "bg-indigo-600";
 
   const isOverloaded = isKgOverloaded || isCbmOverloaded;
+  const isAdhoc = trip?.paymentBasis === "ADHOC" || trip?.vehicle?.ownershipType === "ADHOC";
 
   // Cost & Savings Calculations
-  const costBreakdown = CostCalculator.calculateTripCost(
-    plannedKm,
-    trip?.vehicle || {},
-    dieselRate,
-    1
-  );
+  const costBreakdown = isAdhoc
+    ? {
+        km: plannedKm,
+        diesel_rate: 0,
+        fuel_consumption: 0,
+        fuel_cost_per_km: 0,
+        running_cost_per_km: 0,
+        profit_per_km: 0,
+        per_km_rate: 0,
+        fuel_cost: 0,
+        running_cost: 0,
+        driver_profit: 0,
+        fixed_daily_cost: 0,
+        total_trip_cost: Number(adhocAgreedCost) || 0,
+      }
+    : CostCalculator.calculateTripCost(
+        plannedKm,
+        trip?.vehicle || {},
+        dieselRate,
+        1
+      );
 
-  const consolidationSavings = CostCalculator.calculateConsolidationSavings(
-    costBreakdown.total_trip_cost,
-    trip?.vehicle || {},
-    includedRequests.map((r) => ({
-      id: r.id,
-      requestCode: r.requestCode,
-      plannedDistanceKm: Number(r.plannedDistanceKm) || 50,
-    })),
-    dieselRate
-  );
+  const consolidationSavings = isAdhoc
+    ? {
+        standalone_total: Number(adhocAgreedCost) || 0,
+        combined_cost: Number(adhocAgreedCost) || 0,
+        net_savings: 0,
+        savings_percentage: 0,
+        is_beneficial: true,
+        requests_breakdown: [],
+      }
+    : CostCalculator.calculateConsolidationSavings(
+        costBreakdown.total_trip_cost,
+        trip?.vehicle || {},
+        includedRequests.map((r) => ({
+          id: r.id,
+          requestCode: r.requestCode,
+          plannedDistanceKm: Number(r.plannedDistanceKm) || 50,
+        })),
+        dieselRate
+      );
 
   const costShare = CostCalculator.allocateRequestCostShare(
     costBreakdown.total_trip_cost,
@@ -640,6 +668,7 @@ export function CombineWorkbenchClient({
           routeId: selectedRouteId ? Number(selectedRouteId) : null,
           plannedKm: Number(plannedKm) || 0,
           requestIds: includedRequests.map((r) => r.id),
+          agreedCost: isAdhoc ? Number(adhocAgreedCost) : undefined,
         }),
       });
 
@@ -867,6 +896,13 @@ export function CombineWorkbenchClient({
       })
       .join("\n\n");
 
+    const rawDriverNic =
+      trip?.driver?.nic ||
+      (trip as any)?.driverNic ||
+      trip?.driver?.licenseNumber ||
+      "";
+    const driverNicVal = rawDriverNic ? String(rawDriverNic).trim() : "N/A";
+
     const placeholders: Record<string, string> = {
       trip_no: trip?.tripNo || "TRIP-NEW",
       allocation_date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
@@ -874,10 +910,17 @@ export function CombineWorkbenchClient({
       status: trip?.status || "ALLOCATED",
       planned_km: String(plannedKm || 0),
       vehicle_number: trip?.vehicle?.vehicleNumber || "Unassigned",
-      vehicle_type: trip?.vehicle?.vehicleType || "Standard Fleet",
+      vehicle_type: trip?.vehicle?.vehicleCategory || trip?.vehicle?.vehicleType || "Standard Fleet",
       driver_name: trip?.driver?.name || "Assigned Driver",
-      driver_nic: trip?.driver?.nic || (trip as any)?.driverNic || "N/A",
+      driver_nic: driverNicVal,
+      drivernic: driverNicVal,
+      driver_nic_id: driverNicVal,
+      driver_nic_no: driverNicVal,
+      driver_id: driverNicVal,
+      nic: driverNicVal,
       driver_mobile: trip?.driver?.mobile || "N/A",
+      drivermobile: trip?.driver?.mobile || "N/A",
+      driver_phone: trip?.driver?.mobile || "N/A",
       driver_license: trip?.driver?.licenseNumber || trip?.driver?.license || "N/A",
       total_cbm: totalCbm.toFixed(2),
       total_kg: Math.round(totalKg).toLocaleString(),
@@ -896,7 +939,7 @@ export function CombineWorkbenchClient({
     let subj = tpl.subject || "";
     let body = tpl.body || "";
     for (const [k, v] of Object.entries(placeholders)) {
-      const re = new RegExp(`\\{${k}\\}`, "gi");
+      const re = new RegExp(`\\{\\s*${k}\\s*\\}`, "gi");
       subj = subj.replace(re, v);
       body = body.replace(re, v);
     }
@@ -1224,12 +1267,38 @@ export function CombineWorkbenchClient({
                 <span className="text-slate-500">Trip Distance:</span>
                 <span className="font-bold text-slate-800">{formatNumber(plannedKm, 1)} km</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Trip Total Cost:</span>
-                <span className="font-bold text-blue-700">
-                  Rs. {formatNumber(costBreakdown.total_trip_cost, 2)}
-                </span>
-              </div>
+              {isAdhoc ? (
+                <div className="flex justify-between items-center py-1.5 px-2 rounded-lg bg-amber-50 border border-amber-200">
+                  <span className="text-amber-900 font-bold text-[11px]">Agreed Outside Hire:</span>
+                  {!isLocked ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-amber-700 font-bold">LKR</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={adhocAgreedCost}
+                        onChange={(e) => {
+                          setAdhocAgreedCost(e.target.value);
+                          setHasUnsavedChanges(true);
+                        }}
+                        className="w-24 text-right px-2 py-0.5 text-xs font-bold text-amber-950 bg-white border border-amber-300 rounded focus:ring-1 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <span className="font-bold text-amber-900 text-xs">
+                      Rs. {formatNumber(Number(adhocAgreedCost) || 0, 2)}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Trip Total Cost:</span>
+                  <span className="font-bold text-blue-700">
+                    Rs. {formatNumber(costBreakdown.total_trip_cost, 2)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

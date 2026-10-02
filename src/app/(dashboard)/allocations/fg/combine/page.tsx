@@ -53,6 +53,7 @@ export default async function CombineOverviewPage() {
       }),
       prisma.vehicle.findMany({
         where: { active: 1 },
+        include: { drivers: true },
         orderBy: { vehicleNumber: "asc" },
       }),
       prisma.driver.findMany({

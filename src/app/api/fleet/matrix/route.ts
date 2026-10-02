@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
       prisma.vehicle.findMany({
         where: {
           active: 1,
+          ownershipType: "COMMERCIAL",
           ...plantWhere,
         },
         include: {

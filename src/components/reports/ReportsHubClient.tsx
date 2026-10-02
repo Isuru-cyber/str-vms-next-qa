@@ -67,7 +67,7 @@ export function ReportsHubClient({
   currentMonth = '2026-09',
 }: ReportsHubClientProps) {
   const [activeTab, setActiveTab] = useState<'cost' | 'fleet' | 'demand'>('cost');
-  const [costSubTab, setCostSubTab] = useState<'trips' | 'requests' | 'statements' | 'plants' | 'fixed' | 'km_based'>('trips');
+  const [costSubTab, setCostSubTab] = useState<'trips' | 'requests' | 'statements' | 'plants' | 'fixed' | 'km_based' | 'adhoc'>('trips');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [standardRange, setStandardRange] = useState('this_month');
   const [showKpiCards, setShowKpiCards] = useState(true);
@@ -117,7 +117,23 @@ export function ReportsHubClient({
       const dayTripsCount = vehicleDayTripCounts[vId]?.[tripDate] || 1;
       const workingDaysShare = dayTripsCount > 0 ? 1.0 / dayTripsCount : 1.0;
 
-      const costComp = CostCalculator.calculateTripCost(km, v, dieselRate, workingDaysShare);
+      const isAdhoc = v.ownershipType === 'ADHOC' || t.paymentBasis === 'ADHOC';
+      const costComp = isAdhoc
+        ? {
+            km,
+            diesel_rate: 0,
+            fuel_consumption: 0,
+            fuel_cost_per_km: 0,
+            running_cost_per_km: 0,
+            profit_per_km: 0,
+            per_km_rate: 0,
+            fuel_cost: 0,
+            running_cost: 0,
+            driver_profit: 0,
+            fixed_daily_cost: 0,
+            total_trip_cost: Number(t.totalTripCost ?? t.actualCost ?? t.estimatedCost ?? 0),
+          }
+        : CostCalculator.calculateTripCost(km, v, dieselRate, workingDaysShare);
 
       // Linked requests
       const linkedReqs = (t.tripRequests || []).map((tr: any) => {
@@ -137,14 +153,25 @@ export function ReportsHubClient({
       });
 
       const reqShares = CostCalculator.allocateRequestCostShare(costComp.total_trip_cost, linkedReqs);
-      const savings = CostCalculator.calculateConsolidationSavings(costComp.total_trip_cost, v, linkedReqs, dieselRate);
+      const savings = isAdhoc
+        ? {
+            standalone_total_cost: costComp.total_trip_cost,
+            combined_trip_cost: costComp.total_trip_cost,
+            net_savings: 0,
+            savings_pct: 0,
+            is_beneficial: true,
+            requests_breakdown: [],
+          }
+        : CostCalculator.calculateConsolidationSavings(costComp.total_trip_cost, v, linkedReqs, dieselRate);
 
       return {
         ...t,
         vehicle_number: v.vehicleNumber || 'Unknown',
-        vehicle_type: v.vehicleType || 'Standard',
-        payment_basis: v.paymentBasis || 'KM_BASED',
+        vehicle_type: v.vehicleCategory || v.vehicleType || 'Standard',
+        payment_basis: isAdhoc ? 'ADHOC' : (v.paymentBasis || 'KM_BASED'),
         driver_name: t.driver?.name || 'Assigned Driver',
+        driver_nic: t.driver?.nic || 'N/A',
+        driver_mobile: t.driver?.mobile || 'N/A',
         route_name: t.route?.routeName || 'Custom Route',
         calc_km: km,
         ...costComp,
@@ -216,7 +243,7 @@ export function ReportsHubClient({
   // KM-Based Vehicles Settlement / Performance [NEW SUB-TAB DATA]
   const kmBasedSettlements = useMemo(() => {
     const kmVehs = initialVehicles.filter(
-      (v) => v.paymentBasis !== 'FIXED' && Number(v.monthlyFixedRate || 0) === 0
+      (v) => v.paymentBasis !== 'FIXED' && v.paymentBasis !== 'ADHOC' && v.ownershipType !== 'ADHOC' && Number(v.monthlyFixedRate || 0) === 0
     );
 
     return kmVehs.map((v) => {
@@ -247,45 +274,78 @@ export function ReportsHubClient({
     });
   }, [initialVehicles, tripCostDetails]);
 
-  // Vehicle-wise Monthly Statements (All vehicles)
+  // Vehicle-wise Monthly Statements (Commercial fleet only)
   const vehicleStatements = useMemo(() => {
-    return initialVehicles.map((v) => {
-      const vTrips = tripCostDetails.filter((t) => String(t.vehicleId || t.vehicle?.id) === String(v.id));
-      const vTotalKm = vTrips.reduce((sum, t) => sum + Number(t.calc_km || 0), 0);
-      const vFuelCost = vTrips.reduce((sum, t) => sum + Number(t.fuel_cost || 0), 0);
-      const vRunningCost = vTrips.reduce((sum, t) => sum + Number(t.running_cost || 0), 0);
-      const vDriverProfit = vTrips.reduce((sum, t) => sum + Number(t.driver_profit || 0), 0);
-      const vDailyFixed = vTrips.reduce((sum, t) => sum + Number(t.fixed_daily_cost || 0), 0);
-      const vTotalTripCost = vTrips.reduce((sum, t) => sum + Number(t.total_trip_cost || 0), 0);
+    return initialVehicles
+      .filter((v) => v.ownershipType !== 'ADHOC')
+      .map((v) => {
+        const vTrips = tripCostDetails.filter((t) => String(t.vehicleId || t.vehicle?.id) === String(v.id));
+        const vTotalKm = vTrips.reduce((sum, t) => sum + Number(t.calc_km || 0), 0);
+        const vFuelCost = vTrips.reduce((sum, t) => sum + Number(t.fuel_cost || 0), 0);
+        const vRunningCost = vTrips.reduce((sum, t) => sum + Number(t.running_cost || 0), 0);
+        const vDriverProfit = vTrips.reduce((sum, t) => sum + Number(t.driver_profit || 0), 0);
+        const vDailyFixed = vTrips.reduce((sum, t) => sum + Number(t.fixed_daily_cost || 0), 0);
+        const vTotalTripCost = vTrips.reduce((sum, t) => sum + Number(t.total_trip_cost || 0), 0);
 
-      let fixedSettle: any = null;
-      if (v.paymentBasis === 'FIXED' || Number(v.monthlyFixedRate || 0) > 0) {
-        fixedSettle = CostCalculator.calculateFixedFleetSettlement(v, vTotalKm);
-      }
+        let fixedSettle: any = null;
+        if (v.paymentBasis === 'FIXED' || Number(v.monthlyFixedRate || 0) > 0) {
+          fixedSettle = CostCalculator.calculateFixedFleetSettlement(v, vTotalKm);
+        }
 
-      const totalMonthPayout = (v.paymentBasis === 'FIXED' && fixedSettle) ? fixedSettle.total_payout : vTotalTripCost;
+        const totalMonthPayout = (v.paymentBasis === 'FIXED' && fixedSettle) ? fixedSettle.total_payout : vTotalTripCost;
 
-      return {
-        vehicle_id: v.id,
-        vehicle_number: v.vehicleNumber,
-        vehicle_type: v.vehicleType,
-        payment_basis: v.paymentBasis || 'KM_BASED',
-        monthly_fixed_rate: Number(v.monthlyFixedRate || 0),
-        monthly_km_limit: Number(v.monthlyKmLimit || 0),
-        extra_km_rate: Number(v.extraKmRate || 0),
-        trip_count: vTrips.length,
-        total_km: vTotalKm,
-        fuel_cost: vFuelCost,
-        running_cost: vRunningCost,
-        driver_profit: vDriverProfit,
-        daily_fixed: vDailyFixed,
-        total_trip_cost: vTotalTripCost,
-        fixed_settlement: fixedSettle,
-        total_payout: totalMonthPayout,
-        trips: vTrips,
-      };
-    });
+        return {
+          vehicle_id: v.id,
+          vehicle_number: v.vehicleNumber,
+          vehicle_type: v.vehicleType,
+          payment_basis: v.paymentBasis || 'KM_BASED',
+          monthly_fixed_rate: Number(v.monthlyFixedRate || 0),
+          monthly_km_limit: Number(v.monthlyKmLimit || 0),
+          extra_km_rate: Number(v.extraKmRate || 0),
+          trip_count: vTrips.length,
+          total_km: vTotalKm,
+          fuel_cost: vFuelCost,
+          running_cost: vRunningCost,
+          driver_profit: vDriverProfit,
+          daily_fixed: vDailyFixed,
+          total_trip_cost: vTotalTripCost,
+          fixed_settlement: fixedSettle,
+          total_payout: totalMonthPayout,
+          trips: vTrips,
+        };
+      });
   }, [initialVehicles, tripCostDetails]);
+
+  // Outside / Ad-Hoc Hires Data [NEW SUB-TAB]
+  const adhocHireData = useMemo(() => {
+    const adhocTrips = tripCostDetails.filter(
+      (t) => t.payment_basis === 'ADHOC' || t.vehicle?.ownershipType === 'ADHOC' || (t.vehicle && t.vehicle.ownershipType === 'ADHOC')
+    );
+
+    const totalSpend = adhocTrips.reduce((sum, t) => sum + Number(t.total_trip_cost || 0), 0);
+    const totalTrips = adhocTrips.length;
+    const avgCostPerTrip = totalTrips > 0 ? totalSpend / totalTrips : 0;
+
+    const categoryStats: Record<string, { category: string; count: number; spend: number }> = {};
+    adhocTrips.forEach((t) => {
+      const cat = (t.vehicle?.vehicleCategory || t.vehicle?.vehicle_category || 'Lorry').trim();
+      if (!categoryStats[cat]) {
+        categoryStats[cat] = { category: cat, count: 0, spend: 0 };
+      }
+      categoryStats[cat].count += 1;
+      categoryStats[cat].spend += Number(t.total_trip_cost || 0);
+    });
+
+    const categoryList = Object.values(categoryStats).sort((a, b) => b.spend - a.spend);
+
+    return {
+      trips: adhocTrips,
+      totalSpend,
+      totalTrips,
+      avgCostPerTrip,
+      categories: categoryList,
+    };
+  }, [tripCostDetails]);
 
   // Overall Financial KPIs
   const financials = useMemo(() => {
@@ -508,6 +568,21 @@ export function ReportsHubClient({
     );
   }, [kmBasedSettlements, searchQuery]);
 
+  const filteredAdhocTrips = useMemo(() => {
+    if (!searchQuery.trim()) return adhocHireData.trips;
+    const q = searchQuery.toLowerCase();
+    return adhocHireData.trips.filter(
+      (t: any) =>
+        (t.tripNo || '').toLowerCase().includes(q) ||
+        (t.vehicle_number || '').toLowerCase().includes(q) ||
+        (t.vehicle?.vehicleCategory || '').toLowerCase().includes(q) ||
+        (t.vehicle?.transporterName || '').toLowerCase().includes(q) ||
+        (t.driver_name || '').toLowerCase().includes(q) ||
+        (t.driver_nic || '').toLowerCase().includes(q) ||
+        (t.route_name || '').toLowerCase().includes(q)
+    );
+  }, [adhocHireData.trips, searchQuery]);
+
   // Export handlers
   const handleExportCurrentTable = () => {
     if (activeTab === 'cost') {
@@ -675,6 +750,34 @@ export function ReportsHubClient({
           kb.avg_cost_per_km.toFixed(2),
         ]);
         exportToCsv(`KM_Based_Vehicles_${selectedMonth}`, headers, rows);
+      } else if (costSubTab === 'adhoc') {
+        const headers = [
+          'Trip No',
+          'Date',
+          'Transporter / Supplier',
+          'Vehicle Number',
+          'Category',
+          'Driver Name',
+          'Driver NIC',
+          'Contact Mobile',
+          'Route / Corridor',
+          'Agreed Hire Cost (Rs.)',
+          'Status',
+        ];
+        const rows = filteredAdhocTrips.map((t: any) => [
+          t.tripNo || `TRIP-${t.id}`,
+          (t.createdAt || '').substring(0, 10),
+          t.vehicle?.transporterName || 'Outside Supplier',
+          t.vehicle?.vehicleNumber || t.vehicle_number,
+          t.vehicle?.vehicleCategory || t.vehicle?.vehicle_category || 'Lorry',
+          t.driver?.name || t.driver_name,
+          t.driver?.nic || t.driver_nic,
+          t.driver?.mobile || t.driver_mobile,
+          t.route_name || 'Direct Route',
+          (t.total_trip_cost || 0).toFixed(2),
+          t.status || 'ASSIGNED',
+        ]);
+        exportToCsv(`Outside_Adhoc_Hires_${selectedMonth}`, headers, rows);
       }
     } else if (activeTab === 'fleet') {
       const headers = ['Vehicle Number', 'Vehicle Type', 'Payment Basis', 'Total Trips', 'Distance (KM)', 'Status'];
@@ -949,6 +1052,16 @@ export function ReportsHubClient({
                   }`}
                 >
                   <Gauge className="w-3.5 h-3.5 mr-1.5" /> KM Based
+                </button>
+                <button
+                  onClick={() => setCostSubTab('adhoc')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition flex items-center whitespace-nowrap ${
+                    costSubTab === 'adhoc'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-amber-800 hover:text-amber-950 hover:bg-amber-50'
+                  }`}
+                >
+                  <Combine className="w-3.5 h-3.5 mr-1.5" /> Outside / Ad-Hoc Hires
                 </button>
               </div>
 
@@ -1484,6 +1597,136 @@ export function ReportsHubClient({
                     )}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* -------------------------------------------------- */}
+            {/* SUB-TAB 7: OUTSIDE / AD-HOC HIRES (NEW)           */}
+            {/* -------------------------------------------------- */}
+            {costSubTab === 'adhoc' && (
+              <div className="space-y-4">
+                {/* Mini Summary Cards for Ad-Hoc */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200">
+                  <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Outside Spend</p>
+                    <p className="text-lg font-bold text-emerald-700">Rs. {formatNumber(adhocHireData.totalSpend, 2)}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Ad-Hoc Trips</p>
+                    <p className="text-lg font-bold text-slate-800">{formatNumber(adhocHireData.totalTrips, 0)}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avg Cost / Trip</p>
+                    <p className="text-lg font-bold text-slate-800">Rs. {formatNumber(adhocHireData.avgCostPerTrip, 2)}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Vehicle Categories Used</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {adhocHireData.categories.length === 0 ? (
+                        <span className="text-xs text-slate-400">None</span>
+                      ) : (
+                        adhocHireData.categories.map((c) => (
+                          <span key={c.category} className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">
+                            {c.category}: {c.count}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ad-Hoc Table */}
+                <div className={tableContainerClass}>
+                  <table className="min-w-[1300px] w-full divide-y divide-slate-200">
+                    <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider font-bold shadow-xs">
+                      <tr>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Trip No</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Date</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Transporter / Supplier</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Vehicle No</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Category</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Driver & NIC</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Contact Mobile</th>
+                        <th className="px-4 py-3 text-left whitespace-nowrap bg-slate-50">Route / Corridor</th>
+                        <th className="px-4 py-3 text-right whitespace-nowrap bg-slate-50">Agreed Hire Cost</th>
+                        <th className="px-4 py-3 text-center whitespace-nowrap bg-slate-50">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200 text-xs">
+                      {filteredAdhocTrips.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="px-6 py-12 text-center text-slate-400 whitespace-nowrap font-medium">
+                            No outside / ad-hoc vehicle trips recorded for this month.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAdhocTrips.map((t: any) => {
+                          const tripCategory = t.vehicle?.vehicleCategory || t.vehicle?.vehicle_category || t.vehicle_type || 'Lorry';
+                          const transporter = t.vehicle?.transporterName || 'Outside Supplier';
+                          const vehicleNo = t.vehicle?.vehicleNumber || t.vehicle_number;
+                          const driverName = t.driver?.name || t.driver_name || 'Assigned Driver';
+                          const driverNic = t.driver?.nic || t.driver_nic || 'N/A';
+                          const driverMobile = t.driver?.mobile || t.driver_mobile || 'N/A';
+                          const routeName = t.route?.routeName || t.route_name || 'Custom Route';
+                          const agreedCost = Number(t.total_trip_cost || 0);
+
+                          return (
+                            <tr key={t.id} className="hover:bg-slate-50/80 transition">
+                              <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">
+                                {t.tripNo || `TRIP-${t.id}`}
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                                {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                  {transporter}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                {vehicleNo}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                  {tripCategory}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                                <div>
+                                  <p className="font-semibold text-slate-900">{driverName}</p>
+                                  <p className="text-[11px] text-slate-400 font-mono">NIC: {driverNic}</p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 font-mono whitespace-nowrap">
+                                {driverMobile}
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                                {routeName}
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold text-emerald-700 whitespace-nowrap">
+                                Rs. {formatNumber(agreedCost, 2)}
+                              </td>
+                              <td className="px-4 py-3 text-center whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                    t.status === 'COMPLETED'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : t.status === 'DISPATCHED'
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}
+                                >
+                                  {t.status || 'ASSIGNED'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

@@ -58,6 +58,8 @@ export function FgAllocationHubClient({
 
   // Modals
   const [singleAllocModalOpen, setSingleAllocModalOpen] = useState(false);
+  const [singleFleetMode, setSingleFleetMode] = useState<"COMMERCIAL" | "ADHOC">("COMMERCIAL");
+  const [singleAgreedCost, setSingleAgreedCost] = useState<string>("");
   const [currentAllocReq, setCurrentAllocReq] = useState<any | null>(null);
   const [currentAllocRequests, setCurrentAllocRequests] = useState<any[]>([]);
   const [modalVehicleId, setModalVehicleId] = useState("");
@@ -71,6 +73,8 @@ export function FgAllocationHubClient({
 
   // New Combine Modal
   const [newCombineModalOpen, setNewCombineModalOpen] = useState(false);
+  const [combineFleetMode, setCombineFleetMode] = useState<"COMMERCIAL" | "ADHOC">("COMMERCIAL");
+  const [combineAgreedCost, setCombineAgreedCost] = useState<string>("");
   const [combineVehicleId, setCombineVehicleId] = useState("");
   const [combineDriverId, setCombineDriverId] = useState("");
   const [combineRemarks, setCombineRemarks] = useState("");
@@ -326,6 +330,8 @@ export function FgAllocationHubClient({
   const openSingleAllocModal = async (req: any) => {
     setCurrentAllocReq(req);
     setCurrentAllocRequests([req]);
+    setSingleFleetMode("COMMERCIAL");
+    setSingleAgreedCost("");
     setModalVehicleId("");
     setModalDriverId("");
     setModalRouteId("");
@@ -350,6 +356,8 @@ export function FgAllocationHubClient({
 
     setCurrentAllocReq(selectedReqs[0]);
     setCurrentAllocRequests(selectedReqs);
+    setSingleFleetMode("COMMERCIAL");
+    setSingleAgreedCost("");
     setModalVehicleId("");
     setModalDriverId("");
     setModalRouteId("");
@@ -364,6 +372,8 @@ export function FgAllocationHubClient({
 
   // Open New Combine Modal
   const openNewCombineModal = () => {
+    setCombineFleetMode("COMMERCIAL");
+    setCombineAgreedCost("");
     setCombineVehicleId("");
     setCombineDriverId("");
     setCombineRemarks("");
@@ -374,7 +384,8 @@ export function FgAllocationHubClient({
   const handleSingleVehicleChange = (vId: string) => {
     setModalVehicleId(vId);
     if (vId) {
-      const linked = drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
+      const veh = vehicles.find((v: any) => String(v.id) === String(vId));
+      const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
       if (linked) {
         setModalDriverId(String(linked.id));
       }
@@ -385,7 +396,8 @@ export function FgAllocationHubClient({
   const handleCombineVehicleChange = (vId: string) => {
     setCombineVehicleId(vId);
     if (vId) {
-      const linked = drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
+      const veh = vehicles.find((v: any) => String(v.id) === String(vId));
+      const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
       if (linked) {
         setCombineDriverId(String(linked.id));
       }
@@ -394,15 +406,17 @@ export function FgAllocationHubClient({
 
   const isSingleDriverAutoSelected = useMemo(() => {
     if (!modalVehicleId || !modalDriverId) return false;
-    const linked = drivers.find((d: any) => Number(d.linkedVehicleId) === Number(modalVehicleId));
+    const veh = vehicles.find((v: any) => String(v.id) === String(modalVehicleId));
+    const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(modalVehicleId));
     return linked ? String(linked.id) === String(modalDriverId) : false;
-  }, [modalVehicleId, modalDriverId, drivers]);
+  }, [modalVehicleId, modalDriverId, drivers, vehicles]);
 
   const isCombineDriverAutoSelected = useMemo(() => {
     if (!combineVehicleId || !combineDriverId) return false;
-    const linked = drivers.find((d: any) => Number(d.linkedVehicleId) === Number(combineVehicleId));
+    const veh = vehicles.find((v: any) => String(v.id) === String(combineVehicleId));
+    const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(combineVehicleId));
     return linked ? String(linked.id) === String(combineDriverId) : false;
-  }, [combineVehicleId, combineDriverId, drivers]);
+  }, [combineVehicleId, combineDriverId, drivers, vehicles]);
 
   // Auto re-fetch corridor route on window focus, message, or storage when returning from New Route tab
   useEffect(() => {
@@ -461,6 +475,13 @@ export function FgAllocationHubClient({
       return;
     }
 
+    if (singleFleetMode === "ADHOC") {
+      if (!singleAgreedCost || Number(singleAgreedCost) <= 0) {
+        alert("Please enter a valid Agreed Hire Cost (LKR) for this outside / ad-hoc vehicle.");
+        return;
+      }
+    }
+
     setSubmittingAlloc(true);
     try {
       const res = await fetch("/api/allocations/single", {
@@ -473,6 +494,7 @@ export function FgAllocationHubClient({
           routeId: modalRouteId,
           plannedKm: Number(modalDistance) || 0,
           adminRemarks: modalRemarks,
+          agreedCost: singleFleetMode === "ADHOC" ? Number(singleAgreedCost) : undefined,
         }),
       });
 
@@ -499,6 +521,13 @@ export function FgAllocationHubClient({
       return;
     }
 
+    if (combineFleetMode === "ADHOC") {
+      if (!combineAgreedCost || Number(combineAgreedCost) <= 0) {
+        alert("Please enter a valid Agreed Hire Cost (LKR) for this outside / ad-hoc vehicle.");
+        return;
+      }
+    }
+
     setSubmittingCombine(true);
     try {
       const res = await fetch("/api/allocations/combine", {
@@ -509,6 +538,7 @@ export function FgAllocationHubClient({
           vehicleId: combineVehicleId,
           driverId: combineDriverId,
           adminRemarks: combineRemarks,
+          agreedCost: combineFleetMode === "ADHOC" ? Number(combineAgreedCost) : undefined,
         }),
       });
 
@@ -1046,10 +1076,52 @@ export function FgAllocationHubClient({
                 </span>
               </div>
 
+              {/* Fleet Mode Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Fleet Classification <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSingleFleetMode("COMMERCIAL");
+                      setModalVehicleId("");
+                      setModalDriverId("");
+                      setSingleAgreedCost("");
+                    }}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      singleFleetMode === "COMMERCIAL"
+                        ? "bg-white text-blue-700 shadow-xs border border-slate-200/80"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Commercial Fleet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSingleFleetMode("ADHOC");
+                      setModalVehicleId("");
+                      setModalDriverId("");
+                    }}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      singleFleetMode === "ADHOC"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Combine className="w-3.5 h-3.5" />
+                    <span>Outside / Ad-Hoc Hires</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Vehicle <span className="text-rose-500">*</span>
+                    {singleFleetMode === "ADHOC" ? "Outside / Ad-Hoc Vehicle" : "Vehicle"} <span className="text-rose-500">*</span>
                   </label>
                   <select
                     required
@@ -1057,19 +1129,31 @@ export function FgAllocationHubClient({
                     onChange={(e) => handleSingleVehicleChange(e.target.value)}
                     className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                   >
-                    <option value="">-- Select Vehicle --</option>
-                    {vehicles.map((v) => (
+                    <option value="">-- Select {singleFleetMode === "ADHOC" ? "Outside Vehicle" : "Vehicle"} --</option>
+                    {(singleFleetMode === "ADHOC"
+                      ? vehicles.filter((v: any) => v.ownershipType === "ADHOC")
+                      : vehicles.filter((v: any) => v.ownershipType !== "ADHOC")
+                    ).map((v: any) => (
                       <option key={v.id} value={v.id}>
-                        {v.vehicleNumber} ({v.vehicleType})
+                        {singleFleetMode === "ADHOC"
+                          ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})`
+                          : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})`}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Driver <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Driver <span className="text-rose-500">*</span>
+                    </label>
+                    {isSingleDriverAutoSelected && (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        Auto-assigned
+                      </span>
+                    )}
+                  </div>
                   <select
                     required
                     value={modalDriverId}
@@ -1077,14 +1161,49 @@ export function FgAllocationHubClient({
                     className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                   >
                     <option value="">-- Select Driver --</option>
-                    {drivers.map((d) => (
+                    {(singleFleetMode === "ADHOC"
+                      ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
+                      : drivers.filter((d: any) => d.driverType !== "ADHOC")
+                    ).map((d: any) => (
                       <option key={d.id} value={d.id}>
-                        {d.name} ({d.mobile || "N/A"})
+                        {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+
+              {/* Outside / Ad-Hoc Agreed Hire Cost */}
+              {singleFleetMode === "ADHOC" && (
+                <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-amber-950 mb-0.5">
+                        Agreed Hire Cost (LKR) <span className="text-rose-500">*</span>
+                      </label>
+                      <p className="text-[11px] text-amber-700">
+                        Enter negotiated total hire fee for this outside vehicle
+                      </p>
+                    </div>
+                    <div className="w-48">
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        required
+                        value={singleAgreedCost}
+                        onChange={(e) => setSingleAgreedCost(e.target.value)}
+                        placeholder="e.g. 15000"
+                        className="w-full text-xs font-bold bg-white border border-amber-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-amber-800 bg-amber-100/60 p-2.5 rounded-lg border border-amber-200/60 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Outside hire flat rate. Will NOT trigger diesel fuel formulas or commercial vehicle running rates.</span>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
@@ -1260,10 +1379,52 @@ export function FgAllocationHubClient({
             </div>
 
             <form onSubmit={handleSubmitNewCombine} className="p-5 space-y-4">
+              {/* Fleet Mode Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Fleet Classification <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCombineFleetMode("COMMERCIAL");
+                      setCombineVehicleId("");
+                      setCombineDriverId("");
+                      setCombineAgreedCost("");
+                    }}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      combineFleetMode === "COMMERCIAL"
+                        ? "bg-white text-indigo-700 shadow-xs border border-slate-200/80"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Commercial Fleet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCombineFleetMode("ADHOC");
+                      setCombineVehicleId("");
+                      setCombineDriverId("");
+                    }}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      combineFleetMode === "ADHOC"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Combine className="w-3.5 h-3.5" />
+                    <span>Outside / Ad-Hoc Hires</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Vehicle <span className="text-rose-500">*</span>
+                    {combineFleetMode === "ADHOC" ? "Outside / Ad-Hoc Vehicle" : "Vehicle"} <span className="text-rose-500">*</span>
                   </label>
                   <select
                     required
@@ -1271,10 +1432,15 @@ export function FgAllocationHubClient({
                     onChange={(e) => handleCombineVehicleChange(e.target.value)}
                     className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs text-slate-800"
                   >
-                    <option value="">-- Select Vehicle --</option>
-                    {vehicles.map((v) => (
+                    <option value="">-- Select {combineFleetMode === "ADHOC" ? "Outside Vehicle" : "Vehicle"} --</option>
+                    {(combineFleetMode === "ADHOC"
+                      ? vehicles.filter((v: any) => v.ownershipType === "ADHOC")
+                      : vehicles.filter((v: any) => v.ownershipType !== "ADHOC")
+                    ).map((v: any) => (
                       <option key={v.id} value={v.id}>
-                        {v.vehicleNumber} ({v.vehicleType})
+                        {combineFleetMode === "ADHOC"
+                          ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})`
+                          : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})`}
                       </option>
                     ))}
                   </select>
@@ -1298,14 +1464,49 @@ export function FgAllocationHubClient({
                     className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs text-slate-800"
                   >
                     <option value="">-- Select Driver --</option>
-                    {drivers.map((d) => (
+                    {(combineFleetMode === "ADHOC"
+                      ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(combineVehicleId)))
+                      : drivers.filter((d: any) => d.driverType !== "ADHOC")
+                    ).map((d: any) => (
                       <option key={d.id} value={d.id}>
-                        {d.name} ({d.mobile || "N/A"})
+                        {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+
+              {/* Outside / Ad-Hoc Agreed Hire Cost */}
+              {combineFleetMode === "ADHOC" && (
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-amber-950 mb-0.5">
+                        Agreed Hire Cost (LKR) <span className="text-rose-500">*</span>
+                      </label>
+                      <p className="text-[11px] text-amber-700">
+                        Fixed total hire cost for this outside trip
+                      </p>
+                    </div>
+                    <div className="w-44">
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        required
+                        value={combineAgreedCost}
+                        onChange={(e) => setCombineAgreedCost(e.target.value)}
+                        placeholder="e.g. 15000"
+                        className="w-full text-xs font-bold bg-white border border-amber-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[10.5px] text-amber-800 bg-amber-100/60 p-2 rounded-lg border border-amber-200/60 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>Outside hire flat rate. Commercial contract and diesel rates will not apply.</span>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">

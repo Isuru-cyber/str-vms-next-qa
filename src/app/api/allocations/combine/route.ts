@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
 
     switch (action) {
       case "create-empty": {
-        const { vehicleId, driverId, routeId, adminRemarks } = body;
+        const { vehicleId, driverId, routeId, adminRemarks, agreedCost } = body;
         if (!vehicleId || !driverId) {
           return NextResponse.json({ success: false, message: "Vehicle and driver are required." }, { status: 400 });
         }
@@ -158,6 +158,16 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const targetVeh = await prisma.vehicle.findUnique({
+          where: { id: Number(vehicleId) },
+          select: { id: true, ownershipType: true, paymentBasis: true },
+        });
+        const isAdhoc = targetVeh?.ownershipType === "ADHOC" || targetVeh?.paymentBasis === "ADHOC";
+        const paymentBasis = isAdhoc ? "ADHOC" : (targetVeh?.paymentBasis || "KM_BASED");
+        const costValue = isAdhoc && agreedCost !== undefined && agreedCost !== null && agreedCost !== ""
+          ? Number(agreedCost)
+          : null;
+
         const { trip, tripNo } = await prisma.$transaction(async (tx: any) => {
           const tripNo = await generateNextTripNo(tx);
 
@@ -168,8 +178,17 @@ export async function POST(req: NextRequest) {
               driverId: Number(driverId),
               routeId: routeId ? Number(routeId) : null,
               status: "ASSIGNED",
+              paymentBasis,
+              totalTripCost: costValue,
+              estimatedCost: costValue,
+              actualCost: costValue,
+              standardCost: costValue,
               adminRemarks: adminRemarks || null,
               plannedKm,
+            },
+            include: {
+              vehicle: true,
+              driver: true,
             },
           });
 
@@ -192,7 +211,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "save-allocation": {
-        const { tripId, routeId, plannedKm, requestIds, adminRemarks } = body;
+        const { tripId, routeId, plannedKm, requestIds, adminRemarks, agreedCost } = body;
         if (!tripId) {
           return NextResponse.json({ success: false, message: "Trip ID is required." }, { status: 400 });
         }
@@ -207,6 +226,11 @@ export async function POST(req: NextRequest) {
           if (routeId !== undefined) updateTripData.routeId = routeId ? Number(routeId) : null;
           if (plannedKm !== undefined) updateTripData.plannedKm = Number(plannedKm);
           if (adminRemarks !== undefined) updateTripData.adminRemarks = adminRemarks;
+          if (agreedCost !== undefined && agreedCost !== null && agreedCost !== "") {
+            updateTripData.totalTripCost = Number(agreedCost);
+            updateTripData.estimatedCost = Number(agreedCost);
+            updateTripData.actualCost = Number(agreedCost);
+          }
 
           await tx.deliveryTrip.update({
             where: { id: Number(tripId) },
@@ -269,15 +293,25 @@ export async function POST(req: NextRequest) {
       }
 
       case "update-trip": {
-        const { tripId, routeId, plannedKm, adminRemarks } = body;
+        const { tripId, routeId, plannedKm, adminRemarks, agreedCost } = body;
         const updateData: any = {};
         if (routeId !== undefined) updateData.routeId = routeId ? Number(routeId) : null;
         if (plannedKm !== undefined) updateData.plannedKm = Number(plannedKm);
         if (adminRemarks !== undefined) updateData.adminRemarks = adminRemarks;
+        if (agreedCost !== undefined && agreedCost !== null && agreedCost !== "") {
+          updateData.totalTripCost = Number(agreedCost);
+          updateData.estimatedCost = Number(agreedCost);
+          updateData.actualCost = Number(agreedCost);
+        }
 
         const updated = await prisma.deliveryTrip.update({
           where: { id: Number(tripId) },
           data: updateData,
+          include: {
+            vehicle: true,
+            driver: true,
+            route: true,
+          },
         });
 
         return NextResponse.json({ success: true, trip: updated });
