@@ -579,25 +579,14 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                     <tr key={t.id} className="hover:bg-gray-50/80 transition-colors">
                       {/* Trip Number */}
                       <td className="py-2.5 px-3 w-36 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <Link
-                            href={`/trips/${t.id}`}
-                            className="font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-600 hover:text-white px-2 py-0.5 rounded-lg tracking-tight inline-flex items-center gap-1 transition-colors cursor-pointer group shadow-2xs"
-                            title={`View details for Trip #${t.tripNo}`}
-                          >
-                            <span>{t.tripNo}</span>
-                            <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-                          </Link>
-                          {t.gatePasses && t.gatePasses.length > 0 && (
-                            <span
-                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 tabular-nums shrink-0"
-                              title={`Gate Pass: ${t.gatePasses.map((g) => g.gatePassNo).join(", ")}`}
-                            >
-                              GP: {t.gatePasses[0].gatePassNo}
-                              {t.gatePasses.length > 1 && ` (+${t.gatePasses.length - 1})`}
-                            </span>
-                          )}
-                        </div>
+                        <Link
+                          href={`/trips/${t.id}`}
+                          className="font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-600 hover:text-white px-2 py-0.5 rounded-lg tracking-tight inline-flex items-center gap-1 transition-colors cursor-pointer group shadow-2xs"
+                          title={`View details for Trip #${t.tripNo}`}
+                        >
+                          <span>{t.tripNo}</span>
+                          <Eye className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </Link>
                       </td>
 
                       {/* Date (Separate dedicated column) */}
