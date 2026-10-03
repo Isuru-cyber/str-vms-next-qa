@@ -218,6 +218,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid date format" }, { status: 400 });
     }
 
+    // Disallow status changes for future dates (only current and past dates are allowed)
+    const slNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
+    const slYear = slNow.getFullYear();
+    const slMonth = String(slNow.getMonth() + 1).padStart(2, "0");
+    const slDay = String(slNow.getDate()).padStart(2, "0");
+    const todayStr = `${slYear}-${slMonth}-${slDay}`;
+
+    const logDYear = logDate.getFullYear();
+    const logDMonth = String(logDate.getMonth() + 1).padStart(2, "0");
+    const logDDay = String(logDate.getDate()).padStart(2, "0");
+    const logDateStr = `${logDYear}-${logDMonth}-${logDDay}`;
+
+    if (logDateStr > todayStr) {
+      return NextResponse.json({
+        success: false,
+        message: "Status changes are only permitted for current and past dates. Future dates cannot be modified."
+      }, { status: 400 });
+    }
+
     // Check for conflict: if trips exist on that day and status is DID_NOT_REPORT or ABSENT
     if (["DID_NOT_REPORT", "ABSENT"].includes(status) && !forceOverride) {
       const dayStart = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), 0, 0, 0);

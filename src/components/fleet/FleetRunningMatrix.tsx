@@ -17,6 +17,7 @@ import {
   Truck,
   RotateCcw,
   ExternalLink,
+  Lock,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -105,8 +106,19 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
 
   // Today's date calculations
   const now = new Date();
-  const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
   const todayDay = now.getDate();
+  const isCurrentMonth = currentYear === year && currentMonth === month;
+
+  // Check if a given day in the displayed matrix is in the future
+  const isFutureDate = (d: number) => {
+    if (year > currentYear) return true;
+    if (year < currentYear) return false;
+    if (month > currentMonth) return true;
+    if (month < currentMonth) return false;
+    return d > todayDay;
+  };
 
   // Auto-focus / center current date column on load or month change
   useEffect(() => {
@@ -226,6 +238,7 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
 
   // Open Edit Modal for a Cell
   const handleCellClick = (v: VehicleMatrixItem, dayData: DayData) => {
+    if (isFutureDate(dayData.day)) return;
     setSelectedVehicle(v);
     setSelectedDay(dayData);
     setEditStatus(dayData.status === "OFF" ? "WORKING" : dayData.status);
@@ -236,6 +249,10 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
   // Submit Daily Log / Status
   const handleSaveDailyLog = async (forceOverride = false) => {
     if (!selectedVehicle || !selectedDay) return;
+    if (isFutureDate(selectedDay.day)) {
+      alert("Status changes are only permitted for current and past dates.");
+      return;
+    }
 
     setSavingLog(true);
     try {
@@ -575,6 +592,10 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
             <span className="w-3 h-3 rounded-xs bg-amber-500 inline-block shadow-2xs" />
             <span>Absent / Off</span>
           </div>
+          <div className="flex items-center gap-1 text-slate-400 font-normal ml-auto text-[10.5px]">
+            <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+            <span>Future dates locked (Current & past dates only editable)</span>
+          </div>
         </div>
       </div>
 
@@ -613,16 +634,25 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                 {/* Day Columns 1 to daysInMonth */}
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
                   const isTodayCol = isCurrentMonth && d === todayDay;
+                  const isFutureCol = isFutureDate(d);
                   return (
                     <th
                       key={d}
                       id={`matrix-day-col-${d}`}
                       className={`py-2 px-0.5 text-center font-bold border-b border-r border-slate-800 w-[48px] min-w-[48px] max-w-[48px] transition-colors ${
-                        isTodayCol ? "bg-amber-400 text-slate-950 ring-2 ring-amber-300 relative z-20" : ""
+                        isTodayCol
+                          ? "bg-amber-400 text-slate-950 ring-2 ring-amber-300 relative z-20"
+                          : isFutureCol
+                          ? "bg-slate-900/90 text-slate-400"
+                          : ""
                       }`}
+                      title={isFutureCol ? `Day ${d} (Future Date - Locked)` : isTodayCol ? `Day ${d} (TODAY)` : `Day ${d}`}
                     >
                       <div className="flex flex-col items-center justify-center leading-tight">
-                        <span>{d}</span>
+                        <span className="flex items-center justify-center gap-0.5">
+                          {d}
+                          {isFutureCol && <Lock className="w-2.5 h-2.5 text-slate-500 shrink-0" />}
+                        </span>
                         {isTodayCol && (
                           <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 bg-slate-950 text-amber-300 rounded tracking-tighter">
                             TODAY
@@ -712,6 +742,8 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                           trips: [],
                         };
 
+                        const isFuture = isFutureDate(d);
+
                         // Determine display value based on activeMetric
                         let displayVal: string | number = "";
                         if (activeMetric === "ACTUAL") {
@@ -732,24 +764,35 @@ export function FleetRunningMatrix({ initialData }: FleetRunningMatrixProps) {
                         let cellBg = "bg-white hover:bg-slate-100";
                         let textColor = "text-slate-700";
 
-                        if (dayData.status === "WORKING") {
-                          cellBg = "bg-emerald-500 hover:bg-emerald-600 text-white font-bold";
-                          textColor = "text-white";
-                        } else if (dayData.status === "NIGHT_PARK_HELDUP") {
-                          cellBg = "bg-blue-600 hover:bg-blue-700 text-white font-bold";
-                          textColor = "text-white";
-                        } else if (dayData.status === "DID_NOT_REPORT") {
-                          cellBg = "bg-rose-600 hover:bg-rose-700 text-white font-bold animate-pulse";
-                          textColor = "text-white";
-                          displayVal = "X";
-                        } else if (dayData.status === "ABSENT") {
-                          cellBg = "bg-amber-500 hover:bg-amber-600 text-white font-bold";
-                          textColor = "text-white";
-                          displayVal = "AB";
+                        if (isFuture) {
+                          cellBg = "bg-slate-50/70 text-slate-400";
+                          textColor = "text-slate-400";
+                          if (dayData.tripCount > 0) {
+                            cellBg = "bg-slate-100 text-slate-500 font-medium";
+                            textColor = "text-slate-500";
+                          }
+                        } else {
+                          if (dayData.status === "WORKING") {
+                            cellBg = "bg-emerald-500 hover:bg-emerald-600 text-white font-bold";
+                            textColor = "text-white";
+                          } else if (dayData.status === "NIGHT_PARK_HELDUP") {
+                            cellBg = "bg-blue-600 hover:bg-blue-700 text-white font-bold";
+                            textColor = "text-white";
+                          } else if (dayData.status === "DID_NOT_REPORT") {
+                            cellBg = "bg-rose-600 hover:bg-rose-700 text-white font-bold animate-pulse";
+                            textColor = "text-white";
+                            displayVal = "X";
+                          } else if (dayData.status === "ABSENT") {
+                            cellBg = "bg-amber-500 hover:bg-amber-600 text-white font-bold";
+                            textColor = "text-white";
+                            displayVal = "AB";
+                          }
                         }
 
                         // Tooltip Content
-                        const tooltipText = `
+                        const tooltipText = isFuture
+                          ? `${v.vehicleNumber} (${dayData.dateStr})\nFuture Date — Status cannot be modified yet.\n${dayData.trips.length > 0 ? `Planned Trips: ${dayData.trips.map((t) => t.tripNo).join(", ")}` : "No trips scheduled"}`
+                          : `
 ${v.vehicleNumber} (${dayData.dateStr})
 Status: ${dayData.status}
 Actual KM: ${dayData.actualKm ?? "Not entered"} | Planned: ${dayData.plannedKm ?? 0} KM
@@ -761,12 +804,16 @@ ${dayData.remarks ? `Remark: "${dayData.remarks}"` : "Click to edit status or ad
                         return (
                           <td
                             key={d}
-                            onClick={() => handleCellClick(v, dayData)}
-                            className={`py-2 px-1 text-center border-b border-r border-slate-200 text-xs tabular-nums cursor-pointer select-none transition-colors relative w-[48px] min-w-[48px] max-w-[48px] ${cellBg} ${textColor}`}
+                            onClick={() => !isFuture && handleCellClick(v, dayData)}
+                            className={`py-2 px-1 text-center border-b border-r border-slate-200 text-xs tabular-nums select-none transition-colors relative w-[48px] min-w-[48px] max-w-[48px] ${
+                              isFuture
+                                ? "cursor-not-allowed opacity-60 bg-slate-50/80 text-slate-400"
+                                : `cursor-pointer ${cellBg} ${textColor}`
+                            }`}
                             title={tooltipText}
                           >
-                            <span>{displayVal || "·"}</span>
-                            {dayData.remarks && (
+                            <span>{displayVal || (isFuture ? "-" : "·")}</span>
+                            {dayData.remarks && !isFuture && (
                               <span
                                 className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-300 ring-1 ring-black/20"
                                 title={`Note: ${dayData.remarks}`}
