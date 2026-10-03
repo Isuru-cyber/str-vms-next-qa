@@ -1181,7 +1181,7 @@ export function CombineWorkbenchClient({
             <span>Draft Outlook Email</span>
           </button>
 
-          {/* Notify Driver (WhatsApp / SMS) Button */}
+          {/* Notify Driver Button */}
           <button
             type="button"
             onClick={handleOpenDriverNotify}
@@ -1189,7 +1189,7 @@ export function CombineWorkbenchClient({
             title="Send Trip details to driver via WhatsApp or SMS"
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Notify Driver (SMS / WhatsApp)</span>
+            <span>Notify Driver</span>
           </button>
 
           {isCompleted ? (
