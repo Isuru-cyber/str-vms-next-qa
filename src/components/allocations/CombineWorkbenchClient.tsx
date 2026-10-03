@@ -40,6 +40,9 @@ import {
   Copy,
   Maximize2,
   Search,
+  MessageSquare,
+  MessageCircle,
+  Smartphone,
 } from "lucide-react";
 import { CostCalculator } from "@/lib/cost-calculator";
 import { formatCurrency, formatNumber } from "@/lib/utils";
@@ -144,6 +147,12 @@ export function CombineWorkbenchClient({
   const [targetTripId, setTargetTripId] = useState<string>("");
   const [isTransferring, setIsTransferring] = useState(false);
   const [outlookModalOpen, setOutlookModalOpen] = useState(false);
+
+  // Driver Notification (WhatsApp / SMS) State
+  const [driverNotifyModalOpen, setDriverNotifyModalOpen] = useState(false);
+  const [driverPhone, setDriverPhone] = useState<string>("");
+  const [driverMessageText, setDriverMessageText] = useState<string>("");
+  const [copyDriverMsgSuccess, setCopyDriverMsgSuccess] = useState<boolean>(false);
 
   // Mail Templates State
   const [mailTemplates, setMailTemplates] = useState<any[]>(DEFAULT_MAIL_TEMPLATES);
@@ -1002,6 +1011,78 @@ export function CombineWorkbenchClient({
     }
   };
 
+  // Driver Notification (WhatsApp / SMS) Helpers
+  const generateDriverMessage = () => {
+    const tripNo = trip?.tripNo || "N/A";
+    const route =
+      currentRouteName ||
+      (includedRequests.length > 0
+        ? `${includedRequests[0]?.fromLocation?.locationName || includedRequests[0]?.plant?.name || "Plant Origin"} ➔ ${
+            includedRequests[includedRequests.length - 1]?.toLocation?.locationName || "Destination"
+          }`
+        : "Assigned Route");
+    const driverName = trip?.driver?.name || "Assigned Driver";
+    const vehicleNo = trip?.vehicle?.vehicleNumber || "Assigned Vehicle";
+    const reqDate = includedRequests[0]?.requiredDate
+      ? new Date(includedRequests[0].requiredDate).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    const reqTime = includedRequests[0]?.requiredTime || "";
+
+    const lines = [
+      `🚛 STR-VMS TRIP ASSIGNMENT`,
+      `Trip No: ${tripNo}`,
+      `Route: ${route}`,
+      `Driver: ${driverName}`,
+      `Vehicle: ${vehicleNo}`,
+    ];
+    if (reqDate) {
+      lines.push(`Date: ${reqDate}${reqTime ? ` (${reqTime})` : ""}`);
+    }
+    lines.push(`\nPlease report to dispatch desk on time.`);
+
+    return lines.join("\n");
+  };
+
+  const handleOpenDriverNotify = () => {
+    const rawMobile = trip?.driver?.mobile || (trip as any)?.driverMobile || "";
+    setDriverPhone(rawMobile);
+    setDriverMessageText(generateDriverMessage());
+    setCopyDriverMsgSuccess(false);
+    setDriverNotifyModalOpen(true);
+  };
+
+  const getCleanWhatsAppPhone = () => {
+    let clean = driverPhone.replace(/\D/g, "");
+    if (clean.startsWith("0")) {
+      clean = "94" + clean.substring(1);
+    } else if (clean.length === 9) {
+      clean = "94" + clean;
+    }
+    return clean;
+  };
+
+  const getWhatsAppUrl = () => {
+    const clean = getCleanWhatsAppPhone();
+    return `https://wa.me/${clean}?text=${encodeURIComponent(driverMessageText)}`;
+  };
+
+  const getSmsUrl = () => {
+    const clean = driverPhone.trim();
+    return `sms:${clean}?body=${encodeURIComponent(driverMessageText)}`;
+  };
+
+  const handleCopyDriverMessage = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(driverMessageText);
+      setCopyDriverMsgSuccess(true);
+      setTimeout(() => setCopyDriverMsgSuccess(false), 2000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast alert */}
@@ -1098,6 +1179,17 @@ export function CombineWorkbenchClient({
           >
             <Mail className="w-3.5 h-3.5" />
             <span>Draft Outlook Email</span>
+          </button>
+
+          {/* Notify Driver (WhatsApp / SMS) Button */}
+          <button
+            type="button"
+            onClick={handleOpenDriverNotify}
+            className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+            title="Send Trip details to driver via WhatsApp or SMS"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Notify Driver (SMS / WhatsApp)</span>
           </button>
 
           {isCompleted ? (
@@ -2153,6 +2245,181 @@ export function CombineWorkbenchClient({
                 <Mail className="w-3.5 h-3.5" />
                 <span>Open in Outlook / Mail Client</span>
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3B: Driver WhatsApp & SMS Notification Modal */}
+      {driverNotifyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">Driver Trip Notification</h3>
+                  <p className="text-xs text-slate-500 font-medium">Send Trip No, Route, and Driver details via WhatsApp or Text SMS</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDriverNotifyModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Trip & Driver Summary Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Driver</span>
+                <span className="font-bold text-slate-800 truncate block">{trip?.driver?.name || "No Driver Assigned"}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Vehicle</span>
+                <span className="font-bold text-slate-800 truncate block">{trip?.vehicle?.vehicleNumber || "Unassigned"}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Trip Number</span>
+                <span className="font-bold text-blue-600 truncate block">{trip?.tripNo || "-"}</span>
+              </div>
+            </div>
+
+            {/* Driver Mobile Input */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Driver Mobile Number:</span>
+                </label>
+                {!driverPhone.trim() && (
+                  <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    No number on file
+                  </span>
+                )}
+              </div>
+              <input
+                type="text"
+                value={driverPhone}
+                onChange={(e) => setDriverPhone(e.target.value)}
+                placeholder="e.g. 0771234567 or 94771234567"
+                className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Local formats (07XXXXXXXX or +947XXXXXXXX) are automatically formatted for WhatsApp and SMS.
+              </p>
+            </div>
+
+            {/* Message Body Textarea */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Message Content:</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {driverMessageText.length} chars ({Math.ceil(driverMessageText.length / 153) || 1} SMS)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDriverMessageText(generateDriverMessage())}
+                    className="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition"
+                    title="Reset message to standard template"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyDriverMessage}
+                    className={`text-[11px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-md border transition cursor-pointer ${
+                      copyDriverMsgSuccess
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {copyDriverMsgSuccess ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <textarea
+                rows={7}
+                value={driverMessageText}
+                onChange={(e) => setDriverMessageText(e.target.value)}
+                className="w-full text-xs font-sans bg-white border border-slate-300 rounded-xl p-3 text-slate-800 leading-relaxed focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDriverNotifyModalOpen(false)}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                {/* Send via SMS button */}
+                <a
+                  href={getSmsUrl()}
+                  onClick={(e) => {
+                    if (!driverPhone.trim()) {
+                      e.preventDefault();
+                      alert("Please enter a driver phone number first.");
+                    }
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 ${
+                    !driverPhone.trim()
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                      : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                  }`}
+                  title="Open in native SMS messaging app"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Send via SMS</span>
+                </a>
+
+                {/* Send via WhatsApp button */}
+                <a
+                  href={getWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (!driverPhone.trim()) {
+                      e.preventDefault();
+                      alert("Please enter a driver phone number first.");
+                    }
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 ${
+                    !driverPhone.trim()
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                  }`}
+                  title="Open in WhatsApp Web or App"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send via WhatsApp</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
