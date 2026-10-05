@@ -25,6 +25,8 @@ import {
   ChevronRight,
   CheckSquare,
   FileSpreadsheet,
+  Building2,
+  Gauge,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -193,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: "INTELLIGENCE & REPORTS",
+      title: "COST & FLEET FINANCE",
       items: [
         {
           name: "Executive Analytics",
@@ -202,7 +204,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           visible: can(user, "view_analytics"),
         },
         {
-          name: "Data Reports",
+          name: "Fixed Fleet Costs",
+          href: "/reports/fixed",
+          icon: Building2,
+          visible: can(user, "view_cost_reports"),
+        },
+        {
+          name: "KM-Based Fleet",
+          href: "/reports/km-based",
+          icon: Gauge,
+          visible: can(user, "view_cost_reports"),
+        },
+        {
+          name: "Outside & Ad-Hoc",
+          href: "/reports/adhoc",
+          icon: Truck,
+          visible: can(user, "view_cost_reports"),
+        },
+        {
+          name: "All Master Reports",
           href: "/reports",
           icon: FileSpreadsheet,
           visible: can(user, "view_cost_reports"),
