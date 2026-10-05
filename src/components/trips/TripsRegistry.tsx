@@ -16,6 +16,9 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Eye,
+  Ticket,
+  ScanLine,
+  Plus,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatNumber } from "@/lib/utils";
@@ -70,17 +73,20 @@ interface TripItem {
 interface TripsRegistryProps {
   initialTrips: TripItem[];
   canEnterOdometer?: boolean;
+  canManageGatePass?: boolean;
 }
 
 export const TripsRegistry: React.FC<TripsRegistryProps> = ({
   initialTrips,
   canEnterOdometer = true,
+  canManageGatePass = true,
 }) => {
   const router = useRouter();
   const [trips, setTrips] = useState<TripItem[]>(initialTrips);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ALLOCATED" | "DISPATCHED" | "COMPLETED">("ALL");
   const [kmFilter, setKmFilter] = useState<"ALL" | "PENDING" | "LOGGED">("PENDING");
+  const [gpFilter, setGpFilter] = useState<"ALL" | "HAS_GP" | "NEEDS_GP">("ALL");
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("");
   const [maxRows, setMaxRows] = useState<number>(50);
 
@@ -92,6 +98,15 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
   const [varianceReasonCustom, setVarianceReasonCustom] = useState<string>("");
   const [savingKm, setSavingKm] = useState(false);
   const [kmError, setKmError] = useState<string | null>(null);
+
+  // Gate Pass Modal State
+  const [gpModalOpen, setGpModalOpen] = useState(false);
+  const [selectedTripForGp, setSelectedTripForGp] = useState<TripItem | null>(null);
+  const [gatePassList, setGatePassList] = useState<string[]>([]);
+  const [gatePassInput, setGatePassInput] = useState("");
+  const [savingGp, setSavingGp] = useState(false);
+  const [gpError, setGpError] = useState<string | null>(null);
+  const [gpSuccess, setGpSuccess] = useState<string | null>(null);
 
   // Counts based on the 4-step workflow
   const countAllocated = useMemo(
@@ -120,6 +135,14 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
             t.status
           ) && (!t.actualKm || Number(t.actualKm) === 0)
       ).length,
+    [trips]
+  );
+  const countHasGp = useMemo(
+    () => trips.filter((t) => (t.gatePasses && t.gatePasses.length > 0)).length,
+    [trips]
+  );
+  const countNeedsGp = useMemo(
+    () => trips.filter((t) => (!t.gatePasses || t.gatePasses.length === 0)).length,
     [trips]
   );
 
@@ -209,11 +232,19 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
         matchesKm = hasActualKm;
       }
 
+      let matchesGp = true;
+      const hasGatePass = t.gatePasses && t.gatePasses.length > 0;
+      if (gpFilter === "HAS_GP") {
+        matchesGp = Boolean(hasGatePass);
+      } else if (gpFilter === "NEEDS_GP") {
+        matchesGp = !hasGatePass;
+      }
+
       const matchesDate = isDateInRange(t.createdAt, dateRangeFilter);
 
-      return matchesSearch && matchesStatus && matchesKm && matchesDate;
+      return matchesSearch && matchesStatus && matchesKm && matchesGp && matchesDate;
     });
-  }, [trips, searchQuery, statusFilter, kmFilter, dateRangeFilter]);
+  }, [trips, searchQuery, statusFilter, kmFilter, gpFilter, dateRangeFilter]);
 
   const visibleTrips = useMemo(() => {
     if (maxRows <= 0) return filteredTrips;
@@ -224,10 +255,105 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
     setSearchQuery("");
     setStatusFilter("ALL");
     setKmFilter("PENDING");
+    setGpFilter("ALL");
     setDateRangeFilter("");
   };
 
-  const hasActiveFilters = searchQuery || statusFilter !== "ALL" || kmFilter !== "PENDING" || dateRangeFilter !== "";
+  const hasActiveFilters = searchQuery || statusFilter !== "ALL" || kmFilter !== "PENDING" || gpFilter !== "ALL" || dateRangeFilter !== "";
+
+  // Open Gate Pass Scanner Modal
+  const openGpModal = (trip: TripItem) => {
+    setSelectedTripForGp(trip);
+    const existingGps = trip.gatePasses ? trip.gatePasses.map((g) => g.gatePassNo) : [];
+    setGatePassList(existingGps);
+    setGatePassInput("");
+    setGpError(null);
+    setGpSuccess(null);
+    setGpModalOpen(true);
+  };
+
+  // Add Gate Pass tag/item
+  const handleAddGatePass = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const raw = gatePassInput.trim();
+    if (!raw) return;
+
+    // Support comma or whitespace split
+    const items = raw
+      .split(/[\r\n,]+/)
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+
+    let addedCount = 0;
+    const updated = [...gatePassList];
+
+    for (const item of items) {
+      if (!updated.includes(item)) {
+        updated.push(item);
+        addedCount++;
+      }
+    }
+
+    if (addedCount === 0 && items.length > 0) {
+      setGpError(`Gate pass number '${items.join(", ")}' is already in the list.`);
+      return;
+    }
+
+    setGatePassList(updated);
+    setGatePassInput("");
+    setGpError(null);
+  };
+
+  // Remove Gate Pass tag
+  const handleRemoveGatePass = (gpToRemove: string) => {
+    setGatePassList((prev) => prev.filter((gp) => gp !== gpToRemove));
+    setGpError(null);
+  };
+
+  // Save Gate Passes via API
+  const handleSaveGatePasses = async () => {
+    if (!selectedTripForGp) return;
+    setSavingGp(true);
+    setGpError(null);
+    setGpSuccess(null);
+
+    try {
+      const res = await fetch(`/api/trips/${selectedTripForGp.id}/gate-passes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gatePassNos: gatePassList }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to save gate passes.");
+      }
+
+      // Update in local state
+      setTrips((prevTrips) =>
+        prevTrips.map((t) => {
+          if (t.id === selectedTripForGp.id) {
+            return {
+              ...t,
+              gatePasses: data.gatePasses || gatePassList.map((no, idx) => ({ id: idx, gatePassNo: no, status: "ENTERED" })),
+              status: ["ASSIGNED", "ALLOCATED"].includes(t.status) && gatePassList.length > 0 ? "GATE_PASS_ISSUED" : t.status,
+            };
+          }
+          return t;
+        })
+      );
+
+      setGpSuccess(data.message || "Gate passes saved successfully.");
+      setTimeout(() => {
+        setGpModalOpen(false);
+        setGpSuccess(null);
+      }, 700);
+    } catch (err: any) {
+      setGpError(err.message || "Error saving gate passes.");
+    } finally {
+      setSavingGp(false);
+    }
+  };
 
   // Open KM Entry Modal
   const openKmModal = (trip: TripItem) => {
@@ -485,6 +611,21 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
               </select>
             </div>
 
+            {/* Gate Pass Filter */}
+            <div className="flex items-center gap-1">
+              <Ticket className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">Gate Pass:</span>
+              <select
+                value={gpFilter}
+                onChange={(e) => setGpFilter(e.target.value as any)}
+                className="h-8 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 text-slate-700 font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value="ALL">All Trips</option>
+                <option value="HAS_GP">🎫 GP Entered ({countHasGp})</option>
+                <option value="NEEDS_GP">⚠️ Needs GP ({countNeedsGp})</option>
+              </select>
+            </div>
+
             {/* Date Range Filter */}
             <div className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -547,13 +688,14 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                 <th className="py-2.5 px-3 w-36 whitespace-nowrap">Trip Number</th>
                 <th className="py-2.5 px-3 w-24 whitespace-nowrap">Date</th>
                 <th className="py-2.5 px-3 w-28 text-center whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-3 w-32 whitespace-nowrap">Gate Pass</th>
                 <th className="py-2.5 px-3 w-36 whitespace-nowrap">Vehicle</th>
                 <th className="py-2.5 px-3 w-40 whitespace-nowrap">Driver</th>
                 <th className="py-2.5 px-3 min-w-[240px]">Route Corridor</th>
                 <th className="py-2.5 px-3 w-28 text-center whitespace-nowrap">Requests</th>
                 <th className="py-2.5 px-3 w-28 text-right whitespace-nowrap">Planned (KM)</th>
                 <th className="py-2.5 px-3 w-32 text-right whitespace-nowrap">Actual (KM)</th>
-                <th className="py-2.5 px-3 w-28 text-right pr-4 whitespace-nowrap">Actions</th>
+                <th className="py-2.5 px-3 w-32 text-right pr-4 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -597,6 +739,36 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                       {/* Status */}
                       <td className="py-2.5 px-3 w-28 text-center whitespace-nowrap">
                         <StatusBadge status={t.status} />
+                      </td>
+
+                      {/* Gate Pass */}
+                      <td className="py-2.5 px-3 w-32 whitespace-nowrap">
+                        {t.gatePasses && t.gatePasses.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openGpModal(t)}
+                            className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded-lg tracking-tight transition-colors cursor-pointer group shadow-2xs"
+                            title={`Gate Passes: ${t.gatePasses.map((g) => g.gatePassNo).join(", ")} (Click to view/edit)`}
+                          >
+                            <Ticket className="w-3 h-3 text-indigo-500 shrink-0" />
+                            <span className="truncate max-w-[85px]">{t.gatePasses[0].gatePassNo}</span>
+                            {t.gatePasses.length > 1 && (
+                              <span className="text-[10px] bg-indigo-200 text-indigo-900 px-1 rounded-full font-bold">
+                                +{t.gatePasses.length - 1}
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openGpModal(t)}
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                            title="No Gate Pass recorded. Click to scan or enter barcode"
+                          >
+                            <Ticket className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span>Needs GP</span>
+                          </button>
+                        )}
                       </td>
 
                       {/* Vehicle */}
@@ -682,7 +854,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                       </td>
 
                       {/* Action */}
-                      <td className="py-2.5 px-3 w-28 text-right whitespace-nowrap pr-4">
+                      <td className="py-2.5 px-3 w-32 text-right whitespace-nowrap pr-4">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* View Trip Details Icon Button */}
                           <Link
@@ -692,6 +864,26 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </Link>
+
+                          {/* Gate Pass Scanner / Entry Button */}
+                          {canManageGatePass && (
+                            <button
+                              type="button"
+                              onClick={() => openGpModal(t)}
+                              className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all shadow-2xs cursor-pointer ${
+                                t.gatePasses && t.gatePasses.length > 0
+                                  ? "bg-slate-100 hover:bg-indigo-50 text-indigo-700 hover:text-indigo-800 border border-slate-200"
+                                  : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 font-bold"
+                              }`}
+                              title={
+                                t.gatePasses && t.gatePasses.length > 0
+                                  ? `Manage Gate Passes (${t.gatePasses.map((g) => g.gatePassNo).join(", ")})`
+                                  : "Scan / Record Gate Pass"
+                              }
+                            >
+                              <Ticket className="w-3.5 h-3.5" />
+                            </button>
+                          )}
 
                           {/* Enter / Edit KM Icon Button */}
                           {canEnterOdometer &&
@@ -879,6 +1071,174 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Gate Pass Entry & Barcode Scanner */}
+      {gpModalOpen && selectedTripForGp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-400/30">
+                  <Ticket className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm tracking-tight">
+                    Gate Pass Entry &amp; Scanner — {selectedTripForGp.tripNo}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    Scan barcode or enter official physical gate pass number(s)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGpModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3.5 text-xs">
+              {/* Trip Metadata Box */}
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 grid grid-cols-2 gap-2 text-gray-700">
+                <div>
+                  <span className="text-gray-500 block text-[10px] uppercase font-semibold">Vehicle:</span>
+                  <strong className="text-gray-900 text-xs">
+                    {selectedTripForGp.vehicle?.vehicleNumber || "Unassigned"}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[10px] uppercase font-semibold">Driver:</span>
+                  <strong className="text-gray-900 text-xs">
+                    {selectedTripForGp.driver?.name || "Unassigned"}
+                  </strong>
+                </div>
+                <div className="col-span-2 pt-1 border-t border-gray-200/60 flex items-center justify-between">
+                  <span className="text-gray-500 text-[11px]">Route: {selectedTripForGp.route?.routeName || "General Route"}</span>
+                  <span className="text-indigo-700 font-bold text-[11px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                    {selectedTripForGp.tripRequests.length} cargo orders
+                  </span>
+                </div>
+              </div>
+
+              {/* Barcode Scanner / Input Form */}
+              <form onSubmit={handleAddGatePass} className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-800">
+                  Scan / Enter Gate Pass Number <span className="text-rose-600">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <ScanLine className="w-4 h-4 text-indigo-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Scan barcode or type GP No & press Enter..."
+                      value={gatePassInput}
+                      onChange={(e) => setGatePassInput(e.target.value)}
+                      className="w-full h-10 pl-9 pr-3 text-sm font-bold uppercase text-gray-900 rounded-lg border border-gray-300 focus:outline-hidden focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 bg-white"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  💡 Scanner auto-enters on scan. You can also paste comma-separated numbers (e.g. GP-01, GP-02).
+                </p>
+              </form>
+
+              {/* Scanned Gate Passes Chip List */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-gray-700">
+                    Assigned Gate Passes ({gatePassList.length})
+                  </span>
+                  {gatePassList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setGatePassList([])}
+                      className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+
+                <div className="min-h-[75px] max-h-[140px] overflow-y-auto p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  {gatePassList.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-xs text-slate-400 py-3">
+                      <span>No Gate Passes recorded yet.</span>
+                      <span className="text-[10px] text-slate-400">Scan or type above and click Add or press Enter.</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {gatePassList.map((gpNo) => (
+                        <span
+                          key={gpNo}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-950 font-bold text-xs shadow-2xs group"
+                        >
+                          <Ticket className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          <span>{gpNo}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGatePass(gpNo)}
+                            className="w-4 h-4 rounded-full inline-flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer ml-1"
+                            title="Remove this gate pass"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Error Alert */}
+              {gpError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{gpError}</span>
+                </div>
+              )}
+
+              {/* Success Alert */}
+              {gpSuccess && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{gpSuccess}</span>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGpModalOpen(false)}
+                  disabled={savingGp}
+                  className="h-8 px-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveGatePasses}
+                  disabled={savingGp}
+                  className="h-8 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {savingGp ? "Saving..." : "Save Gate Passes"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

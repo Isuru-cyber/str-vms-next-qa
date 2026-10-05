@@ -72,6 +72,10 @@ export default async function ReconciliationPage() {
         (sum: number, tr: any) => sum + (Number(tr.request?.requiredKg) || 0),
         0
       );
+      const plannedCbm = t.tripRequests.reduce(
+        (sum: number, tr: any) => sum + (Number(tr.request?.requiredCbm) || 0),
+        0
+      );
       const latestRec = t.reconciliations?.[0] || null;
 
       // Extract unique invoice numbers across all requests in this trip
@@ -113,6 +117,7 @@ export default async function ReconciliationPage() {
         requestCount: t.tripRequests.length,
         plannedBoxes,
         plannedWeightKg,
+        plannedCbm,
         invoices,
         gatePasses: t.gatePasses.map((gp: any) => ({
           id: gp.id,

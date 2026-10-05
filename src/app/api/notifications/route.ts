@@ -31,10 +31,10 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const readSharedIds = new Set(readReceipts.map((r) => Number(r.title)).filter((n) => !isNaN(n)));
+    const readSharedIds = new Set(readReceipts.map((r: { title: string }) => Number(r.title)).filter((n: number) => !isNaN(n)));
 
     // Map isRead dynamically based on user ownership or personal read receipt
-    const notifications = rawNotifications.map((n) => {
+    const notifications = rawNotifications.map((n: any) => {
       const isShared = n.userId === null;
       const isReadForUser = isShared ? readSharedIds.has(n.id) || n.isRead === 1 : n.isRead === 1;
       return {
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const unreadCount = notifications.filter((n) => n.isRead === 0).length;
+    const unreadCount = notifications.filter((n: any) => n.isRead === 0).length;
 
     return NextResponse.json({
       status: "success",
@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
         },
         select: { title: true },
       });
-      const existingReceiptIds = new Set(existingReceipts.map((r) => r.title));
+      const existingReceiptIds = new Set(existingReceipts.map((r: { title: string }) => r.title));
 
       const newReceipts = unreadShared
-        .filter((n) => !existingReceiptIds.has(String(n.id)))
-        .map((n) => ({
+        .filter((n: any) => !existingReceiptIds.has(String(n.id)))
+        .map((n: any) => ({
           userId: session.id,
           roleTarget: "USER_READ_RECEIPT",
           title: String(n.id),

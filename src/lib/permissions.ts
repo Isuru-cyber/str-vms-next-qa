@@ -9,6 +9,7 @@ import { can, isSuperAdmin, isAdmin } from "./permission-utils";
 export async function authorizeApi(
   options?: {
     action?: string;
+    anyAction?: string[];
     adminOnly?: boolean;
     superAdminOnly?: boolean;
   }
@@ -47,6 +48,18 @@ export async function authorizeApi(
         {
           success: false,
           message: `Forbidden: You do not have permission to '${options.action}'.`,
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  if (options?.anyAction && !options.anyAction.some((act) => can(user, act))) {
+    return {
+      error: NextResponse.json(
+        {
+          success: false,
+          message: `Forbidden: You do not have permission to perform this action.`,
         },
         { status: 403 }
       ),

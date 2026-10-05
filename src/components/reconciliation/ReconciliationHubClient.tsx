@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   FileCheck2,
@@ -21,6 +21,8 @@ import {
   Printer,
   X,
   AlertCircle,
+  Ticket,
+  ClipboardCheck,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatNumber, formatCurrency } from "@/lib/utils";
@@ -36,6 +38,7 @@ interface ReconciliationTrip {
   requestCount: number;
   plannedBoxes: number;
   plannedWeightKg: number;
+  plannedCbm?: number;
   invoices?: Array<{
     invoiceNo: string;
     status: string;
@@ -64,6 +67,10 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
   const [activeTab, setActiveTab] = useState<"trips" | "upload">("trips");
   const [trips, setTrips] = useState<ReconciliationTrip[]>(initialTrips);
 
+  // Filters for Tab 1
+  const [searchQuery, setSearchQuery] = useState("");
+  const [gpFilter, setGpFilter] = useState<"ALL" | "READY" | "MISSING">("ALL");
+
   // File Upload State
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -72,13 +79,15 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
   const [resultsFilter, setResultsFilter] = useState<"ALL" | "MATCHED" | "VARIANCE" | "UNMATCHED">("ALL");
   const [error, setError] = useState<string | null>(null);
 
-  // Override Modal
+  // Override / Manual Audit Modal
   const [overrideModal, setOverrideModal] = useState<any | null>(null);
   const [targetTripForOverride, setTargetTripForOverride] = useState("");
+  const [modalGatePassNo, setModalGatePassNo] = useState("");
   const [actualVehicle, setActualVehicle] = useState("");
   const [actualBoxes, setActualBoxes] = useState("");
   const [actualKg, setActualKg] = useState("");
   const [actualCbm, setActualCbm] = useState("");
+  const [auditorVerification, setAuditorVerification] = useState<"VERIFIED" | "DISCREPANCY_FLAGGED">("VERIFIED");
   const [overrideRemarks, setOverrideRemarks] = useState("");
   const [isOverriding, setIsOverriding] = useState(false);
 
@@ -142,30 +151,53 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
     }
   };
 
-  // Open Override Modal
+  // Open Override / Manual Audit Modal
   const handleOpenOverride = (item: any) => {
     setOverrideModal(item);
     const existingTripId = item.vms_trip_id || item.tripId || item.id;
     setTargetTripForOverride(existingTripId ? String(existingTripId) : "");
     setActualVehicle(item.actual_vehicle || item.actualVehicleNo || item.vehicleNumber || item.vehicle_no || "");
-    setActualBoxes(String(item.total_boxes || item.actualBoxes || item.actual_boxes || item.plannedBoxes || 0));
-    setActualKg(String(item.total_kg || item.actualKg || item.actual_kg || item.plannedWeightKg || 0));
-    setActualCbm(String(item.total_cbm || item.actualCbm || item.actual_cbm || 0));
-    setOverrideRemarks(item.variance_remarks || item.varianceRemarks || "Verified & matched with Commercial Invoice dispatch");
+
+    const foundTrip = trips.find((t) => t.id === Number(existingTripId)) || item;
+    const existingGp = (foundTrip.gatePasses && foundTrip.gatePasses.length > 0)
+      ? foundTrip.gatePasses.map((g: any) => g.gatePassNo).join(", ")
+      : (item.gate_pass_no || item.gatePassNo || "");
+    setModalGatePassNo(existingGp);
+
+    const pBoxes = foundTrip.plannedBoxes ?? item.total_boxes ?? 0;
+    const pKg = foundTrip.plannedWeightKg ?? item.total_kg ?? 0;
+    const pCbm = foundTrip.plannedCbm ?? item.total_cbm ?? 0;
+
+    const existingActualBoxes = foundTrip.latestReconciliation?.actualBoxes ?? item.actual_boxes ?? item.total_boxes;
+    const existingActualKg = foundTrip.latestReconciliation?.actualKg ?? item.actual_kg ?? item.total_kg;
+    const existingActualCbm = foundTrip.latestReconciliation?.actualCbm ?? item.actual_cbm ?? item.total_cbm;
+
+    setActualBoxes(existingActualBoxes !== undefined && existingActualBoxes !== null ? String(existingActualBoxes) : String(pBoxes));
+    setActualKg(existingActualKg !== undefined && existingActualKg !== null ? String(existingActualKg) : String(pKg));
+    setActualCbm(existingActualCbm !== undefined && existingActualCbm !== null ? String(existingActualCbm) : String(pCbm));
+
+    const matchStat = foundTrip.latestReconciliation?.matchStatus || item.match_status;
+    setAuditorVerification(matchStat === "VARIANCE" ? "DISCREPANCY_FLAGGED" : "VERIFIED");
+    setOverrideRemarks(foundTrip.latestReconciliation?.varianceRemarks || item.variance_remarks || item.varianceRemarks || "");
   };
 
-  // Submit Override
+  // Submit Override / Manual Audit
   const handleSubmitOverride = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!overrideModal || !overrideRemarks.trim()) return;
+    if (!overrideModal) return;
 
     const tripTargetId = Number(overrideModal.vms_trip_id || overrideModal.tripId || overrideModal.id || targetTripForOverride);
     if (!tripTargetId) {
-      showToast("error", "Please select a target delivery trip to bind this commercial invoice.");
+      showToast("error", "Please select a target delivery trip to bind this record.");
       return;
     }
 
-    const currentInv = overrideModal.invoice_no || overrideModal.invoiceNo || overrideModal.gate_pass_no || overrideModal.gatePassNo;
+    if (!overrideRemarks.trim()) {
+      showToast("error", "Auditor Verification remarks / Variance notes are required.");
+      return;
+    }
+
+    const cleanGp = modalGatePassNo.trim() || overrideModal.gatePassNo || overrideModal.gate_pass_no || `GP-${tripTargetId}`;
 
     setIsOverriding(true);
     try {
@@ -174,27 +206,27 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tripId: tripTargetId,
-          invoiceNo: currentInv,
-          gatePassNo: currentInv,
+          gatePassNo: cleanGp,
           actualVehicle,
           actualBoxes: parseInt(actualBoxes, 10) || 0,
           actualKg: parseFloat(actualKg) || 0,
           actualCbm: parseFloat(actualCbm) || 0,
-          overrideReason: overrideRemarks,
+          auditorVerification,
+          varianceRemarks: overrideRemarks.trim(),
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        showToast("error", data.message || "Override failed.");
+        showToast("error", data.message || "Manual audit failed.");
         return;
       }
 
       // Update upload results table if open
       setUploadResults(
         uploadResults.map((r) =>
-          (r.invoice_no === currentInv || r.gate_pass_no === currentInv)
-            ? { ...r, match_status: "MANUAL_OVERRIDE", variance_remarks: overrideRemarks, vms_trip_id: tripTargetId }
+          (r.gate_pass_no === cleanGp || r.vms_trip_id === tripTargetId)
+            ? { ...r, match_status: data.matchStatus || "MATCHED", variance_remarks: overrideRemarks, vms_trip_id: tripTargetId }
             : r
         )
       );
@@ -202,33 +234,22 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
       // Update trips list
       setTrips(
         trips.map((t) => {
-          const hasInv = (t.invoices && t.invoices.some((inv) => inv.invoiceNo === currentInv)) || t.id === tripTargetId;
-          if (hasInv) {
-            const updatedInvoices = t.invoices?.map((inv) =>
-              inv.invoiceNo === currentInv ? { ...inv, status: "RECONCILED" } : inv
-            ) || [];
-            const allInvoicesReconciled = updatedInvoices.length > 0
-              ? updatedInvoices.every((inv) => inv.status === "RECONCILED" || inv.status === "MATCHED")
-              : true;
-
+          if (t.id === tripTargetId) {
             const isAlreadyFinal = ["FINALIZED", "CLOSED"].includes(t.status);
-            const nextStatus = isAlreadyFinal ? t.status : (allInvoicesReconciled ? "RECONCILED" : t.status);
-
             return {
               ...t,
-              status: nextStatus,
+              status: isAlreadyFinal ? t.status : "RECONCILED",
+              gatePasses: t.gatePasses && t.gatePasses.length > 0
+                ? t.gatePasses
+                : [{ id: 0, gatePassNo: cleanGp, status: "ENTERED" }],
               latestReconciliation: {
-                matchStatus: "MANUAL_OVERRIDE",
+                matchStatus: data.matchStatus || (auditorVerification === "VERIFIED" ? "MATCHED" : "VARIANCE"),
                 actualVehicleNo: actualVehicle,
                 actualBoxes: parseInt(actualBoxes, 10) || 0,
                 actualKg: parseFloat(actualKg) || 0,
                 actualCbm: parseFloat(actualCbm) || 0,
-                varianceRemarks: overrideRemarks,
+                varianceRemarks: overrideRemarks.trim(),
               },
-              invoices: updatedInvoices,
-              gatePasses: t.gatePasses.map((gp) =>
-                gp.gatePassNo === currentInv ? { ...gp, status: "RECONCILED" } : gp
-              ),
             };
           }
           return t;
@@ -236,7 +257,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
       );
 
       setOverrideModal(null);
-      showToast("success", data.message);
+      showToast("success", data.message || "Manual cargo audit and reconciliation saved successfully!");
     } catch (err: any) {
       showToast("error", err.message || "Network error.");
     } finally {
@@ -294,6 +315,37 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
     }
   };
 
+  const countGpReady = useMemo(
+    () => trips.filter((t: ReconciliationTrip) => t.gatePasses && t.gatePasses.length > 0).length,
+    [trips]
+  );
+  const countGpMissing = useMemo(
+    () => trips.filter((t: ReconciliationTrip) => !t.gatePasses || t.gatePasses.length === 0).length,
+    [trips]
+  );
+
+  const filteredTrips = useMemo(() => {
+    return trips.filter((t: ReconciliationTrip) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        t.tripNo.toLowerCase().includes(q) ||
+        t.vehicleNumber.toLowerCase().includes(q) ||
+        t.driverName.toLowerCase().includes(q) ||
+        t.gatePasses.some((g) => g.gatePassNo.toLowerCase().includes(q));
+
+      let matchesGp = true;
+      const hasGp = t.gatePasses && t.gatePasses.length > 0;
+      if (gpFilter === "READY") {
+        matchesGp = Boolean(hasGp);
+      } else if (gpFilter === "MISSING") {
+        matchesGp = !hasGp;
+      }
+
+      return matchesSearch && matchesGp;
+    });
+  }, [trips, searchQuery, gpFilter]);
+
   return (
     <div className="space-y-3 flex flex-col min-h-0">
       {/* Toast Alert */}
@@ -319,7 +371,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
         <div className="flex items-center gap-2">
           <FileCheck2 className="w-5 h-5 text-indigo-600" />
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">
-            Commercial Invoice Reconciliation
+            Commercial Invoice &amp; Gate Pass Reconciliation
           </h1>
         </div>
 
@@ -334,7 +386,7 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            Trips & Invoices ({trips.length})
+            Trips Reconciliation ({trips.length})
           </button>
           <button
             type="button"
@@ -357,11 +409,74 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-gray-900">
-                  Dispatched Trips Awaiting Reconciliation & Final Approval
+                  Dispatched Trips Awaiting Reconciliation &amp; Final Approval
                 </h3>
                 <p className="text-[11px] text-gray-500">
-                  Review planned invoices, verify Datatex dispatch actuals, and finalize trips
+                  Verify physical Gate Passes, audit actual cargo weights, and finalize reconciliation
                 </p>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="p-3 bg-slate-50 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search trip no, vehicle, driver, gate pass..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-8 pl-8 pr-3 text-xs bg-white rounded-lg border border-gray-200 focus:outline-hidden focus:border-indigo-600"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setGpFilter("ALL")}
+                  className={`h-7 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    gpFilter === "ALL"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  <span>All Trips</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${gpFilter === "ALL" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-700"}`}>
+                    {trips.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGpFilter("READY")}
+                  className={`h-7 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    gpFilter === "READY"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  <Ticket className="w-3 h-3 text-indigo-400" />
+                  <span>Gate Pass Ready</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${gpFilter === "READY" ? "bg-white/20 text-white" : "bg-indigo-50 text-indigo-700"}`}>
+                    {countGpReady}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGpFilter("MISSING")}
+                  className={`h-7 px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    gpFilter === "MISSING"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  <AlertCircle className="w-3 h-3 text-amber-500" />
+                  <span>Needs Gate Pass</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${gpFilter === "MISSING" ? "bg-white/20 text-white" : "bg-amber-50 text-amber-800"}`}>
+                    {countGpMissing}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -371,28 +486,24 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                   <tr>
                     <th className="py-3 px-4">Trip No</th>
                     <th className="py-3 px-4">Vehicle & Driver</th>
-                    <th className="py-3 px-4">Commercial Invoices</th>
+                    <th className="py-3 px-4">Gate Pass(es)</th>
                     <th className="py-3 px-4">Cargo (Planned vs Reconciled)</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {trips.length === 0 ? (
+                  {filteredTrips.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-gray-400">
-                        No trips currently awaiting reconciliation.
+                        No trips match the selected criteria.
                       </td>
                     </tr>
                   ) : (
-                    trips.map((t) => {
+                    filteredTrips.map((t: ReconciliationTrip) => {
                       const isFinalized = ["FINALIZED", "CLOSED"].includes(t.status);
                       const isReconciled = t.status === "RECONCILED";
                       const rec = t.latestReconciliation;
-
-                      const tripInvoices = t.invoices && t.invoices.length > 0
-                        ? t.invoices
-                        : t.gatePasses.map((gp) => ({ invoiceNo: gp.gatePassNo, status: gp.status }));
 
                       return (
                         <tr key={t.id} className="hover:bg-gray-50/80 transition-colors">
@@ -420,88 +531,52 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                           </td>
 
                           <td className="py-3.5 px-4 max-w-[240px]">
-                            {tripInvoices.length === 0 ? (
-                              <span className="text-gray-400 italic text-[11px]">
-                                No invoices recorded
-                              </span>
-                            ) : (
-                              <div className="relative group inline-block">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  {tripInvoices.slice(0, 2).map((inv, idx) => (
-                                    <span
-                                      key={idx}
-                                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums border ${
-                                        inv.status === "RECONCILED"
-                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                          : "bg-amber-50 text-amber-700 border-amber-200"
-                                      }`}
-                                    >
-                                      <span>{inv.invoiceNo}</span>
-                                      {inv.status === "RECONCILED" && (
-                                        <Check className="w-2.5 h-2.5" />
-                                      )}
-                                    </span>
-                                  ))}
-
-                                  {tripInvoices.length > 2 && (
-                                    <span
-                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold tabular-nums bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
-                                      title="Hover to view all invoices"
-                                    >
-                                      +{tripInvoices.length - 2} more
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Floating Hover Popover for all Invoices */}
-                                {tripInvoices.length > 2 && (
-                                  <div className="hidden group-hover:block absolute left-0 top-full mt-1.5 z-50 w-64 p-3 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-800 text-xs transition-all animate-in fade-in duration-150">
-                                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100 dark:border-slate-800">
-                                      <span className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[10px]">
-                                        Commercial Invoices
-                                      </span>
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 tabular-nums">
-                                        {tripInvoices.length} total
-                                      </span>
-                                    </div>
-                                    <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
-                                      {tripInvoices.map((inv, idx) => (
-                                        <div
-                                          key={idx}
-                                          className="flex items-center justify-between p-1.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 border border-gray-100 dark:border-slate-700"
-                                        >
-                                          <span className="font-bold text-gray-800 dark:text-gray-200 tabular-nums">
-                                            {inv.invoiceNo}
-                                          </span>
-                                          <span
-                                            className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                                              inv.status === "RECONCILED"
-                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                            }`}
-                                          >
-                                            {inv.status === "RECONCILED" ? "Reconciled" : "Pending"}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+                            {t.gatePasses && t.gatePasses.length > 0 ? (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {t.gatePasses.map((gp: any, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                    title={`Gate Pass: ${gp.gatePassNo}`}
+                                  >
+                                    <Ticket className="w-3 h-3 text-indigo-500 shrink-0" />
+                                    <span>{gp.gatePassNo}</span>
+                                  </span>
+                                ))}
                               </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
+                                <span>Needs Gate Pass</span>
+                              </span>
                             )}
                           </td>
 
                           <td className="py-3.5 px-4 text-gray-700 tabular-nums">
-                            <div>
-                              <span>Planned: </span>
-                              <strong>{formatNumber(t.plannedWeightKg, 0)} kg</strong> &bull;{" "}
+                            <div className="text-xs">
+                              <span className="text-gray-500 font-medium">Planned: </span>
+                              <strong>{formatNumber(t.plannedWeightKg, 1)} kg</strong> &bull;{" "}
                               <span>{t.plannedBoxes} bxs</span>
+                              {t.plannedCbm ? <span> &bull; {formatNumber(t.plannedCbm, 2)} cbm</span> : null}
                             </div>
                             {rec && rec.actualKg !== null && rec.actualKg !== undefined && (
-                              <div className="text-[11px] text-emerald-700">
+                              <div className="text-[11px] text-emerald-700 mt-0.5 flex items-center gap-1 font-semibold">
                                 <span>Actual: </span>
-                                <strong>{formatNumber(rec.actualKg, 0)} kg</strong> &bull;{" "}
+                                <strong>{formatNumber(rec.actualKg, 1)} kg</strong> &bull;{" "}
                                 <span>{rec.actualBoxes} bxs</span>
+                                {rec.actualCbm ? <span> &bull; {formatNumber(rec.actualCbm, 2)} cbm</span> : null}
+                                {Math.abs(Number(rec.actualKg) - t.plannedWeightKg) > 1 && (
+                                  <span
+                                    className={`ml-1 px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                      rec.matchStatus === "VARIANCE"
+                                        ? "bg-amber-100 text-amber-900 border border-amber-200"
+                                        : "bg-emerald-100 text-emerald-900"
+                                    }`}
+                                  >
+                                    {Number(rec.actualKg) - t.plannedWeightKg > 0 ? "+" : ""}
+                                    {(Number(rec.actualKg) - t.plannedWeightKg).toFixed(1)} kg
+                                  </span>
+                                )}
                               </div>
                             )}
                           </td>
@@ -524,24 +599,12 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                               {!isFinalized && (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const primaryInv = tripInvoices[0]?.invoiceNo || `TRIP-${t.tripNo}`;
-                                    handleOpenOverride({
-                                      vms_trip_id: t.id,
-                                      invoice_no: primaryInv,
-                                      gate_pass_no: primaryInv,
-                                      actual_vehicle: t.vehicleNumber !== "-" ? t.vehicleNumber : "",
-                                      total_boxes: t.plannedBoxes,
-                                      total_kg: t.plannedWeightKg,
-                                      total_cbm: 0,
-                                      variance_remarks: "Verified & matched with Commercial Invoice dispatch",
-                                    });
-                                  }}
+                                  onClick={() => handleOpenOverride(t)}
                                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200 cursor-pointer shadow-2xs"
-                                  title="Manual reconcile and verify dispatch actuals"
+                                  title="Manual audit, verify cargo & gate pass actuals"
                                 >
-                                  <FileCheck2 className="w-3.5 h-3.5 text-indigo-600" />
-                                  <span>Reconcile</span>
+                                  <ClipboardCheck className="w-3.5 h-3.5 text-indigo-600" />
+                                  <span>Audit Actuals</span>
                                 </button>
                               )}
 
@@ -789,134 +852,246 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
         </div>
       )}
 
-      {/* MODAL 1: Variance Manual Override Modal */}
-      {overrideModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-gray-900">
-                  Reconcile &amp; Audit Actuals: {overrideModal.invoice_no || overrideModal.invoiceNo || overrideModal.gate_pass_no || overrideModal.gatePassNo}
-                </h3>
-                <p className="text-xs text-gray-500">Record actual dispatch quantities, vehicle plate &amp; verification remarks</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOverrideModal(null)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* MODAL 1: Manual Cargo Audit & Reconciliation Modal */}
+      {overrideModal && (() => {
+        const selectedTrip = trips.find((t) => t.id === Number(overrideModal.vms_trip_id || overrideModal.tripId || overrideModal.id || targetTripForOverride));
+        const plannedBoxesVal = selectedTrip?.plannedBoxes ?? overrideModal?.total_boxes ?? 0;
+        const plannedKgVal = selectedTrip?.plannedWeightKg ?? overrideModal?.total_kg ?? 0;
+        const plannedCbmVal = selectedTrip?.plannedCbm ?? overrideModal?.total_cbm ?? 0;
 
-            <form onSubmit={handleSubmitOverride} className="space-y-3.5 text-xs">
-              {(!overrideModal.vms_trip_id && !overrideModal.tripId && !overrideModal.id) && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-                  <label className="text-amber-900 block text-[10px] uppercase font-bold">
-                    Target Delivery Trip to Bind <span className="text-rose-600">*</span>
-                  </label>
-                  <select
-                    value={targetTripForOverride}
-                    onChange={(e) => setTargetTripForOverride(e.target.value)}
-                    className="w-full text-xs font-bold bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                    required
-                  >
-                    <option value="">-- Select Target Delivery Trip --</option>
-                    {trips.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        Trip #{t.tripNo} — {t.vehicleNumber} ({t.status})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+        const currentActualBoxes = parseInt(actualBoxes, 10) || 0;
+        const currentActualKg = parseFloat(actualKg) || 0;
+        const currentActualCbm = parseFloat(actualCbm) || 0;
 
-              <div className="grid grid-cols-2 gap-3.5 p-3.5 bg-gray-50 rounded-xl">
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">
-                    Actual Vehicle Lorry
-                  </span>
-                  <input
-                    type="text"
-                    value={actualVehicle}
-                    onChange={(e) => setActualVehicle(e.target.value)}
-                    className="w-full text-xs font-bold bg-white border border-gray-300 rounded-xl px-3 py-2 mt-1 focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">
-                    Actual Boxes
-                  </span>
-                  <input
-                    type="number"
-                    value={actualBoxes}
-                    onChange={(e) => setActualBoxes(e.target.value)}
-                    className="w-full text-xs bg-white border border-gray-300 rounded-xl px-3 py-2 mt-1 tabular-nums focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
+        const diffBoxes = currentActualBoxes - plannedBoxesVal;
+        const diffKg = currentActualKg - plannedKgVal;
+        const diffCbm = currentActualCbm - plannedCbmVal;
 
-              <div className="grid grid-cols-2 gap-3.5 p-3.5 bg-gray-50 rounded-xl">
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">
-                    Actual Weight (KG)
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={actualKg}
-                    onChange={(e) => setActualKg(e.target.value)}
-                    className="w-full text-xs font-bold text-indigo-700 bg-white border border-gray-300 rounded-xl px-3 py-2 mt-1 tabular-nums focus:ring-2 focus:ring-indigo-500"
-                  />
+        return (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center p-3 z-50 animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-xl w-full max-h-[92vh] overflow-y-auto p-5 shadow-2xl space-y-4 border border-gray-200 animate-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <ClipboardCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 tracking-tight">
+                      Manual Cargo Audit &amp; Reconciliation — Trip #{selectedTrip?.tripNo || overrideModal.tripNo || overrideModal.vms_trip_no || "N/A"}
+                    </h3>
+                    <p className="text-[11px] text-gray-500">
+                      Verify physical Gate Pass, audit cargo weights &amp; sign off reconciliation
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">
-                    Actual Volume (CBM)
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={actualCbm}
-                    onChange={(e) => setActualCbm(e.target.value)}
-                    className="w-full text-xs bg-white border border-gray-300 rounded-xl px-3 py-2 mt-1 tabular-nums focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Auditor Verification / Variance Remarks <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={overrideRemarks}
-                  onChange={(e) => setOverrideRemarks(e.target.value)}
-                  placeholder="Explain the operational verification or cargo variance details..."
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setOverrideModal(null)}
-                  className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200 cursor-pointer"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!overrideRemarks.trim() || isOverriding}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
-                >
-                  {isOverriding ? "Saving..." : "Save Reconciliation"}
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleSubmitOverride} className="space-y-3.5 text-xs">
+                {/* Trip binding selector if opened from unmatched upload */}
+                {(!overrideModal.vms_trip_id && !overrideModal.tripId && !overrideModal.id) && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                    <label className="text-amber-900 block text-[10px] uppercase font-bold">
+                      Target Delivery Trip to Bind <span className="text-rose-600">*</span>
+                    </label>
+                    <select
+                      value={targetTripForOverride}
+                      onChange={(e) => setTargetTripForOverride(e.target.value)}
+                      className="w-full text-xs font-bold bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">-- Select Target Delivery Trip --</option>
+                      {trips.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          Trip #{t.tripNo} — {t.vehicleNumber} ({t.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Gate Pass Input Box */}
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-800">
+                    Physical Gate Pass Number(s) <span className="text-rose-600">*</span>
+                  </label>
+                  <div className="relative">
+                    <Ticket className="w-4 h-4 text-indigo-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter Gate Pass No (e.g. GP-89412 or comma-separated: GP-01, GP-02)"
+                      value={modalGatePassNo}
+                      onChange={(e) => setModalGatePassNo(e.target.value)}
+                      className="w-full h-9 pl-9 pr-3 text-xs font-bold uppercase rounded-lg border border-gray-300 bg-white focus:outline-hidden focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 text-gray-900"
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-400 block">
+                    Official security gate pass number logged at plant dispatch
+                  </span>
+                </div>
+
+                {/* Side-by-Side Planned vs Actual Cargo Grid */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase text-slate-700 tracking-wider">
+                    <span>Cargo Verification (System vs Physical)</span>
+                    <span className="text-[10px] text-slate-400 font-normal lowercase">editable inputs below</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    {/* Boxes */}
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase block">Boxes (Ctns)</span>
+                      <div className="text-[11px] text-gray-600">
+                        Planned: <strong>{plannedBoxesVal}</strong>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] text-indigo-700 font-semibold block">Actual:</span>
+                        <input
+                          type="number"
+                          value={actualBoxes}
+                          onChange={(e) => setActualBoxes(e.target.value)}
+                          className="w-full text-center text-xs font-bold bg-white border border-gray-300 rounded-md px-2 py-1 tabular-nums focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="text-[10px] font-bold tabular-nums">
+                        {diffBoxes === 0 ? (
+                          <span className="text-emerald-600">Match (0)</span>
+                        ) : (
+                          <span className="text-amber-700">{diffBoxes > 0 ? `+${diffBoxes}` : diffBoxes} bxs</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Weight KG */}
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase block">Weight (KG)</span>
+                      <div className="text-[11px] text-gray-600">
+                        Planned: <strong>{formatNumber(plannedKgVal, 1)}</strong>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] text-indigo-700 font-semibold block">Actual:</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={actualKg}
+                          onChange={(e) => setActualKg(e.target.value)}
+                          className="w-full text-center text-xs font-bold bg-white border border-gray-300 rounded-md px-2 py-1 tabular-nums focus:ring-1 focus:ring-indigo-500 text-indigo-950"
+                        />
+                      </div>
+                      <div className="text-[10px] font-bold tabular-nums">
+                        {Math.abs(diffKg) < 0.1 ? (
+                          <span className="text-emerald-600">Match (0.0)</span>
+                        ) : (
+                          <span className={Math.abs(diffKg) > 10 ? "text-rose-600" : "text-amber-700"}>
+                            {diffKg > 0 ? `+${diffKg.toFixed(1)}` : diffKg.toFixed(1)} kg
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Volume CBM */}
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase block">Volume (CBM)</span>
+                      <div className="text-[11px] text-gray-600">
+                        Planned: <strong>{formatNumber(plannedCbmVal, 2)}</strong>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] text-indigo-700 font-semibold block">Actual:</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={actualCbm}
+                          onChange={(e) => setActualCbm(e.target.value)}
+                          className="w-full text-center text-xs font-bold bg-white border border-gray-300 rounded-md px-2 py-1 tabular-nums focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="text-[10px] font-bold tabular-nums">
+                        {Math.abs(diffCbm) < 0.01 ? (
+                          <span className="text-emerald-600">Match (0.00)</span>
+                        ) : (
+                          <span className="text-amber-700">{diffCbm > 0 ? `+${diffCbm.toFixed(2)}` : diffCbm.toFixed(2)} cbm</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Variance Alert Banner */}
+                {(Math.abs(diffKg) >= 0.5 || diffBoxes !== 0) && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Cargo Variance Detected:</span>
+                    </div>
+                    <span className="font-bold tabular-nums">
+                      {diffKg !== 0 && `Weight: ${diffKg > 0 ? `+${diffKg.toFixed(1)}` : diffKg.toFixed(1)} kg `}
+                      {diffBoxes !== 0 && `(${diffBoxes > 0 ? `+${diffBoxes}` : diffBoxes} bxs)`}
+                    </span>
+                  </div>
+                )}
+
+                {/* Auditor Verification Dropdown */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-800 mb-1">
+                    Auditor Verification Status <span className="text-rose-600">*</span>
+                  </label>
+                  <select
+                    value={auditorVerification}
+                    onChange={(e) => setAuditorVerification(e.target.value as any)}
+                    className="w-full h-9 px-3 text-xs font-semibold rounded-lg border border-gray-300 bg-white focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="VERIFIED">✅ Verified &amp; Approved (Within Tolerance / Clean Match)</option>
+                    <option value="DISCREPANCY_FLAGGED">⚠️ Discrepancy Flagged (Variance Audit Required)</option>
+                  </select>
+                </div>
+
+                {/* Variance Remarks * */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Auditor Verification / Variance Remarks <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={overrideRemarks}
+                    onChange={(e) => setOverrideRemarks(e.target.value)}
+                    placeholder="Explain the physical verification findings, reasons for cargo weight variance, or security confirmation..."
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideModal(null)}
+                    disabled={isOverriding}
+                    className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!overrideRemarks.trim() || isOverriding}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isOverriding ? "Saving..." : "Save & Reconcile Trip"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL 2: Finalize Trip Modal */}
       {finalizeModalTrip && (

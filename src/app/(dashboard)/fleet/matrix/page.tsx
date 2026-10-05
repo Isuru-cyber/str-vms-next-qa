@@ -87,9 +87,9 @@ export default async function FleetMatrixPage({
       }),
     ]);
 
-    matrixData = vehicles.map((v) => {
-      const vTrips = trips.filter((t) => t.vehicleId === v.id);
-      const vLogs = dailyLogs.filter((l) => l.vehicleId === v.id);
+    matrixData = vehicles.map((v: any) => {
+      const vTrips = trips.filter((t: any) => t.vehicleId === v.id);
+      const vLogs = dailyLogs.filter((l: any) => l.vehicleId === v.id);
 
       const days: Record<number, any> = {};
       let totalActualKm = 0;
@@ -100,20 +100,20 @@ export default async function FleetMatrixPage({
       let absentDays = 0;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const dayTrips = vTrips.filter((t) => {
+        const dayTrips = vTrips.filter((t: any) => {
           const d = new Date(t.createdAt);
           return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === day;
         });
 
-        const dayLog = vLogs.find((l) => {
+        const dayLog = vLogs.find((l: any) => {
           const d = new Date(l.logDate);
           return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === day;
         });
 
-        const dayPlannedKm = dayTrips.reduce((sum, t) => sum + (Number(t.plannedKm) || 0), 0);
-        const hasActual = dayTrips.some((t) => Number(t.actualKm) > 0);
+        const dayPlannedKm = dayTrips.reduce((sum: number, t: any) => sum + (Number(t.plannedKm) || 0), 0);
+        const hasActual = dayTrips.some((t: any) => Number(t.actualKm) > 0);
         const dayActualKm = hasActual
-          ? dayTrips.reduce((sum, t) => sum + (Number(t.actualKm) || 0), 0)
+          ? dayTrips.reduce((sum: number, t: any) => sum + (Number(t.actualKm) || 0), 0)
           : null;
         const dayVariance = dayActualKm !== null ? Number((dayActualKm - dayPlannedKm).toFixed(1)) : null;
 
@@ -141,7 +141,7 @@ export default async function FleetMatrixPage({
           actualKm: dayActualKm !== null ? Number(dayActualKm.toFixed(1)) : null,
           varianceKm: dayVariance,
           tripCount: dayTrips.length,
-          trips: dayTrips.map((t) => ({
+          trips: dayTrips.map((t: any) => ({
             id: t.id,
             tripNo: t.tripNo,
             status: t.status,
