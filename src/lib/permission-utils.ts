@@ -74,6 +74,8 @@ export const ALL_SYSTEM_PERMISSIONS: PermissionDefinition[] = [
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPER_ADMIN: ALL_SYSTEM_PERMISSIONS.map((p) => p.key),
+  SUPER_USER: ALL_SYSTEM_PERMISSIONS.map((p) => p.key),
+  SUPERUSER: ALL_SYSTEM_PERMISSIONS.map((p) => p.key),
   ADMIN: [
     "view_dashboard",
     "view_map",
@@ -166,11 +168,11 @@ export function getRoleDefaultPermissions(roleCode: string): string[] {
 export function can(user: SessionUser | null, permission: string): boolean {
   if (!user) return false;
 
-  // Super Admin has full company-wide access to all actions UNLESS custom permissions are explicitly configured
-  if (user.roleCode === "SUPER_ADMIN" && !user.hasCustomPermissions) return true;
+  // Super Admin / Super User has full company-wide access to ALL actions and pages unconditionally
+  if (isSuperAdmin(user)) return true;
 
   // Hard deny super-admin-exclusive actions to all non-Super-Admin roles
-  if (user.roleCode !== "SUPER_ADMIN" && (SUPER_ADMIN_EXCLUSIVE_ACTIONS as readonly string[]).includes(permission)) {
+  if (!isSuperAdmin(user) && (SUPER_ADMIN_EXCLUSIVE_ACTIONS as readonly string[]).includes(permission as any)) {
     return false;
   }
 
@@ -180,29 +182,33 @@ export function can(user: SessionUser | null, permission: string): boolean {
   }
 
   // Otherwise, fall back to default role permissions
-  const rolePerms = DEFAULT_ROLE_PERMISSIONS[user.roleCode] || [];
+  const rolePerms = DEFAULT_ROLE_PERMISSIONS[user.roleCode.toUpperCase()] || DEFAULT_ROLE_PERMISSIONS[user.roleCode] || [];
   return rolePerms.includes(permission);
 }
 
 export function isSuperAdmin(user: SessionUser | null): boolean {
-  return user?.roleCode === "SUPER_ADMIN";
+  if (!user?.roleCode) return false;
+  const rc = user.roleCode.toUpperCase();
+  return rc === "SUPER_ADMIN" || rc === "SUPER_USER" || rc === "SUPERUSER";
 }
 
 export function isAdmin(user: SessionUser | null): boolean {
-  return user?.roleCode === "SUPER_ADMIN" || user?.roleCode === "ADMIN";
+  if (!user?.roleCode) return false;
+  const rc = user.roleCode.toUpperCase();
+  return isSuperAdmin(user) || rc === "ADMIN";
 }
 
 export function isDispatcher(user: SessionUser | null): boolean {
-  const role = user?.roleCode || "";
-  return ["SUPER_ADMIN", "ADMIN", "POWER_USER", "DISPATCHER"].includes(role);
+  const role = (user?.roleCode || "").toUpperCase();
+  return ["SUPER_ADMIN", "SUPER_USER", "SUPERUSER", "ADMIN", "POWER_USER", "DISPATCHER"].includes(role);
 }
 
 export function isRequester(user: SessionUser | null): boolean {
-  return user?.roleCode === "ENTRY_USER";
+  return (user?.roleCode || "").toUpperCase() === "ENTRY_USER";
 }
 
 export function isAuditor(user: SessionUser | null): boolean {
-  return user?.roleCode === "VIEW_USER";
+  return (user?.roleCode || "").toUpperCase() === "VIEW_USER";
 }
 
 /**
@@ -211,12 +217,12 @@ export function isAuditor(user: SessionUser | null): boolean {
  */
 export function canManageRole(currentUser: SessionUser | null, targetRoleCode: string): boolean {
   if (!currentUser) return false;
-  if (currentUser.roleCode === "SUPER_ADMIN") {
+  if (isSuperAdmin(currentUser)) {
     return true;
   }
-  if (currentUser.roleCode === "ADMIN") {
+  if ((currentUser.roleCode || "").toUpperCase() === "ADMIN") {
     // Admins cannot create, edit, or delete Super Admins or other Admins
-    return !["SUPER_ADMIN", "ADMIN"].includes(targetRoleCode);
+    return !["SUPER_ADMIN", "SUPER_USER", "SUPERUSER", "ADMIN"].includes(targetRoleCode.toUpperCase());
   }
   return false;
 }

@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
-import { getRoleDefaultPermissions } from "./permission-utils";
+import { getRoleDefaultPermissions, ALL_SYSTEM_PERMISSIONS } from "./permission-utils";
 
 function getJwtSecretKey(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -81,8 +81,11 @@ export const getSession = cache(async (options?: { skipDbSync?: boolean }): Prom
       return null;
     }
 
-    const hasCustom = liveUser.sidebarHiddenItems === "CUSTOM" || liveUser.permissions.length > 0;
-    const permissions = hasCustom
+    const isSuper = ["SUPER_ADMIN", "SUPER_USER", "SUPERUSER"].includes(liveUser.role.code.toUpperCase());
+    const hasCustom = !isSuper && (liveUser.sidebarHiddenItems === "CUSTOM" || liveUser.permissions.length > 0);
+    const permissions = isSuper
+      ? ALL_SYSTEM_PERMISSIONS.map((p) => p.key)
+      : hasCustom
       ? liveUser.permissions.map((p: { permissionKey: string }) => p.permissionKey)
       : getRoleDefaultPermissions(liveUser.role.code);
 

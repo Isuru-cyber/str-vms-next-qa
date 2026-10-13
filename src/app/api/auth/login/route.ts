@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, setSessionCookie, SessionUser } from "@/lib/auth";
-import { getRoleDefaultPermissions } from "@/lib/permission-utils";
+import { getRoleDefaultPermissions, ALL_SYSTEM_PERMISSIONS } from "@/lib/permission-utils";
 import { ActivityLogger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
@@ -96,8 +96,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Successful Login
-    const hasCustom = userRecord.sidebarHiddenItems === "CUSTOM" || userRecord.permissions.length > 0;
-    const permissions = hasCustom
+    const isSuper = ["SUPER_ADMIN", "SUPER_USER", "SUPERUSER"].includes(userRecord.role.code.toUpperCase());
+    const hasCustom = !isSuper && (userRecord.sidebarHiddenItems === "CUSTOM" || userRecord.permissions.length > 0);
+    const permissions = isSuper
+      ? ALL_SYSTEM_PERMISSIONS.map((p) => p.key)
+      : hasCustom
       ? userRecord.permissions.map((p: { permissionKey: string }) => p.permissionKey)
       : getRoleDefaultPermissions(userRecord.role.code);
 
