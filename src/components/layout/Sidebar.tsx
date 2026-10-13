@@ -50,6 +50,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname();
 
+  const isRouteActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (href === "/allocations/fg") return pathname === "/allocations/fg";
+    if (href === "/requests") return pathname === "/requests" || (pathname.startsWith("/requests/") && pathname !== "/requests/create");
+    if (href === "/reports") return pathname === "/reports";
+    return pathname === href || pathname.startsWith(href + "/");
+  };
+
   const navGroups = [
     {
       title: "OVERVIEW",
@@ -311,14 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="space-y-1.5">
                   {visibleItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive =
-                      item.href === "/"
-                        ? pathname === "/"
-                        : item.href === "/allocations/fg"
-                        ? pathname === "/allocations/fg"
-                        : item.href === "/requests"
-                        ? pathname === "/requests"
-                        : pathname === item.href || pathname.startsWith(item.href + "/");
+                    const isActive = isRouteActive(item.href);
 
                     return (
                       <Link
@@ -351,14 +352,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="space-y-1.5">
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive =
-                    item.href === "/"
-                      ? pathname === "/"
-                      : item.href === "/allocations/fg"
-                      ? pathname === "/allocations/fg"
-                      : item.href === "/requests"
-                      ? pathname === "/requests"
-                      : pathname === item.href || pathname.startsWith(item.href + "/");
+                  const isActive = isRouteActive(item.href);
 
                   return (
                     <Link
