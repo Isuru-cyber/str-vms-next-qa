@@ -231,15 +231,55 @@ body {
 /* Global sleek scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.35);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.55);
+}
+
+/* Enhanced horizontal scrollbar for data tables (slightly larger & visible track) */
+.scrollbar-table-horizontal {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(100, 116, 139, 0.5) #f1f5f9;
+}
+.scrollbar-table-horizontal::-webkit-scrollbar {
+  height: 10px;
+  width: 6px;
+}
+.scrollbar-table-horizontal::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+.scrollbar-table-horizontal::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 6px;
+  border: 1.5px solid #f1f5f9;
+}
+.scrollbar-table-horizontal::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.75);
+}
+
+[data-theme="dark"] .scrollbar-table-horizontal,
+.dark .scrollbar-table-horizontal {
+  scrollbar-color: rgba(148, 163, 184, 0.5) #0f172a;
+}
+[data-theme="dark"] .scrollbar-table-horizontal::-webkit-scrollbar-track,
+.dark .scrollbar-table-horizontal::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+[data-theme="dark"] .scrollbar-table-horizontal::-webkit-scrollbar-thumb,
+.dark .scrollbar-table-horizontal::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.45);
+  border: 1.5px solid #0f172a;
+}
+[data-theme="dark"] .scrollbar-table-horizontal::-webkit-scrollbar-thumb:hover,
+.dark .scrollbar-table-horizontal::-webkit-scrollbar-thumb:hover {
+  background: rgba(203, 213, 225, 0.7);
 }

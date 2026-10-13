@@ -476,7 +476,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
   const modalVariance = !isNaN(modalActualKm) ? modalActualKm - modalPlannedKm : null;
 
   return (
-    <div className="space-y-2 w-full min-w-0 flex flex-col min-h-0">
+    <div className="space-y-2 w-full min-w-0 flex flex-col min-h-0 md:h-[calc(100vh-82px)] md:overflow-hidden">
       {/* Slim Top Bar: KPI Summary & Action Buttons in a Single Line */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-gray-200 shadow-2xs shrink-0">
         {/* Slim KPI Cards in one line - Equal Widths */}
@@ -680,8 +680,8 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
       </div>
 
       {/* Trips Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden flex flex-col min-h-0">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-235px)] scrollbar-thin">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden flex flex-col min-h-0 flex-1">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scrollbar-table-horizontal">
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-slate-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200 sticky top-0 z-20 shadow-xs">
               <tr>
@@ -701,7 +701,7 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
             <tbody className="divide-y divide-gray-100">
               {visibleTrips.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-400">
+                  <td colSpan={11} className="p-8 text-center text-gray-400">
                     No trips match the selected criteria.
                   </td>
                 </tr>
