@@ -119,23 +119,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: FileCheck2,
           visible: can(user, "view_reconciliation"),
         },
-        {
-          name: "POD Management",
-          href: "/pod",
-          icon: CheckSquare,
-          visible: can(user, "manage_pod"),
-        },
-      ],
-    },
-    {
-      title: "LIVE TRACKING",
-      items: [
-        {
-          name: "Live GIS Map",
-          href: "/map",
-          icon: MapIcon,
-          visible: can(user, "view_map"),
-        },
       ],
     },
     {
