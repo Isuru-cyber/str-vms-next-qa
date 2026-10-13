@@ -81,7 +81,7 @@ export const getSession = cache(async (options?: { skipDbSync?: boolean }): Prom
       return null;
     }
 
-    const isSuper = ["SUPER_ADMIN", "SUPER_USER", "SUPERUSER"].includes(liveUser.role.code.toUpperCase());
+    const isSuper = liveUser.role.code.toUpperCase() === "SUPER_ADMIN";
     const hasCustom = !isSuper && (liveUser.sidebarHiddenItems === "CUSTOM" || liveUser.permissions.length > 0);
     const permissions = isSuper
       ? ALL_SYSTEM_PERMISSIONS.map((p) => p.key)

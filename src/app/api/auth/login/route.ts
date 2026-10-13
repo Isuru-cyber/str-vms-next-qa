@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Successful Login
-    const isSuper = ["SUPER_ADMIN", "SUPER_USER", "SUPERUSER"].includes(userRecord.role.code.toUpperCase());
+    const isSuper = userRecord.role.code.toUpperCase() === "SUPER_ADMIN";
     const hasCustom = !isSuper && (userRecord.sidebarHiddenItems === "CUSTOM" || userRecord.permissions.length > 0);
     const permissions = isSuper
       ? ALL_SYSTEM_PERMISSIONS.map((p) => p.key)

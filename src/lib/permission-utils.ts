@@ -74,8 +74,6 @@ export const ALL_SYSTEM_PERMISSIONS: PermissionDefinition[] = [
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPER_ADMIN: ALL_SYSTEM_PERMISSIONS.map((p) => p.key),
-  SUPER_USER: ALL_SYSTEM_PERMISSIONS.map((p) => p.key),
-  SUPERUSER: ALL_SYSTEM_PERMISSIONS.map((p) => p.key),
   ADMIN: [
     "view_dashboard",
     "view_map",
@@ -188,19 +186,18 @@ export function can(user: SessionUser | null, permission: string): boolean {
 
 export function isSuperAdmin(user: SessionUser | null): boolean {
   if (!user?.roleCode) return false;
-  const rc = user.roleCode.toUpperCase();
-  return rc === "SUPER_ADMIN" || rc === "SUPER_USER" || rc === "SUPERUSER";
+  return user.roleCode.toUpperCase() === "SUPER_ADMIN";
 }
 
 export function isAdmin(user: SessionUser | null): boolean {
   if (!user?.roleCode) return false;
   const rc = user.roleCode.toUpperCase();
-  return isSuperAdmin(user) || rc === "ADMIN";
+  return rc === "SUPER_ADMIN" || rc === "ADMIN";
 }
 
 export function isDispatcher(user: SessionUser | null): boolean {
   const role = (user?.roleCode || "").toUpperCase();
-  return ["SUPER_ADMIN", "SUPER_USER", "SUPERUSER", "ADMIN", "POWER_USER", "DISPATCHER"].includes(role);
+  return ["SUPER_ADMIN", "ADMIN", "POWER_USER", "DISPATCHER"].includes(role);
 }
 
 export function isRequester(user: SessionUser | null): boolean {
@@ -222,7 +219,7 @@ export function canManageRole(currentUser: SessionUser | null, targetRoleCode: s
   }
   if ((currentUser.roleCode || "").toUpperCase() === "ADMIN") {
     // Admins cannot create, edit, or delete Super Admins or other Admins
-    return !["SUPER_ADMIN", "SUPER_USER", "SUPERUSER", "ADMIN"].includes(targetRoleCode.toUpperCase());
+    return !["SUPER_ADMIN", "ADMIN"].includes(targetRoleCode.toUpperCase());
   }
   return false;
 }
