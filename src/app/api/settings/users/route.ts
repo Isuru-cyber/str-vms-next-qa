@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, getSession, setSessionCookie } from "@/lib/auth";
 import { authorizeApi, canManageRole, SUPER_ADMIN_EXCLUSIVE_ACTIONS } from "@/lib/permissions";
+import { generateNextUserCode } from "@/lib/sequence";
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,8 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const count = await prisma.user.count();
-    const userCode = `USR-${String(count + 1).padStart(4, "0")}`;
+    const userCode = await generateNextUserCode();
     const hashedPassword = await hashPassword(password);
 
     const newUser = await prisma.user.create({

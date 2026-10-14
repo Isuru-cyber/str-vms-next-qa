@@ -94,4 +94,57 @@ export async function generateNextRequestCode(client?: any): Promise<string> {
   });
 }
 
+async function internalGenerateNextUserCode(tx: any): Promise<string> {
+  // Acquire transaction-scoped advisory lock for user sequence
+  await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(718293);");
+
+  // Fetch all existing users to determine true max sequence number
+  const users = await tx.user.findMany({
+    select: { id: true, userCode: true },
+  });
+
+  let maxNum = 0;
+  for (const u of users) {
+    if (u.id && u.id > maxNum) {
+      maxNum = u.id;
+    }
+    if (u.userCode) {
+      const match = u.userCode.match(/\d+/);
+      if (match) {
+        const parsed = parseInt(match[0], 10);
+        if (!isNaN(parsed) && parsed > maxNum) {
+          maxNum = parsed;
+        }
+      }
+    }
+  }
+
+  let nextNum = maxNum + 1;
+  let attempts = 0;
+  while (attempts < 100) {
+    attempts++;
+    const padLength = Math.max(4, String(nextNum).length);
+    const candidate = `USR-${String(nextNum).padStart(padLength, "0")}`;
+    const exists = await tx.user.findUnique({
+      where: { userCode: candidate },
+      select: { id: true },
+    });
+    if (!exists) {
+      return candidate;
+    }
+    nextNum++;
+  }
+  throw new Error("Failed to generate unique user code after 100 attempts.");
+}
+
+export async function generateNextUserCode(client?: any): Promise<string> {
+  if (client) {
+    return internalGenerateNextUserCode(client);
+  }
+  return prisma.$transaction(async (tx) => {
+    return internalGenerateNextUserCode(tx);
+  });
+}
+
+
 
