@@ -1133,13 +1133,16 @@ export function FgAllocationHubClient({
                     {(singleFleetMode === "ADHOC"
                       ? vehicles.filter((v: any) => v.ownershipType === "ADHOC")
                       : vehicles.filter((v: any) => v.ownershipType !== "ADHOC")
-                    ).map((v: any) => (
-                      <option key={v.id} value={v.id}>
-                        {singleFleetMode === "ADHOC"
-                          ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})`
-                          : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})`}
-                      </option>
-                    ))}
+                    ).map((v: any) => {
+                      const isBusy = v.status && v.status !== "AVAILABLE";
+                      return (
+                        <option key={v.id} value={v.id} disabled={isBusy}>
+                          {singleFleetMode === "ADHOC"
+                            ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
+                            : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -1164,11 +1167,14 @@ export function FgAllocationHubClient({
                     {(singleFleetMode === "ADHOC"
                       ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
                       : drivers.filter((d: any) => d.driverType !== "ADHOC")
-                    ).map((d: any) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}
-                      </option>
-                    ))}
+                    ).map((d: any) => {
+                      const isBusy = d.status && d.status !== "AVAILABLE";
+                      return (
+                        <option key={d.id} value={d.id} disabled={isBusy}>
+                          {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}{isBusy ? ` — [${d.status}]` : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -1436,13 +1442,16 @@ export function FgAllocationHubClient({
                     {(combineFleetMode === "ADHOC"
                       ? vehicles.filter((v: any) => v.ownershipType === "ADHOC")
                       : vehicles.filter((v: any) => v.ownershipType !== "ADHOC")
-                    ).map((v: any) => (
-                      <option key={v.id} value={v.id}>
-                        {combineFleetMode === "ADHOC"
-                          ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})`
-                          : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})`}
-                      </option>
-                    ))}
+                    ).map((v: any) => {
+                      const isBusy = v.status && v.status !== "AVAILABLE";
+                      return (
+                        <option key={v.id} value={v.id} disabled={isBusy}>
+                          {combineFleetMode === "ADHOC"
+                            ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
+                            : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -1467,11 +1476,14 @@ export function FgAllocationHubClient({
                     {(combineFleetMode === "ADHOC"
                       ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(combineVehicleId)))
                       : drivers.filter((d: any) => d.driverType !== "ADHOC")
-                    ).map((d: any) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}
-                      </option>
-                    ))}
+                    ).map((d: any) => {
+                      const isBusy = d.status && d.status !== "AVAILABLE";
+                      return (
+                        <option key={d.id} value={d.id} disabled={isBusy}>
+                          {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}{isBusy ? ` — [${d.status}]` : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
