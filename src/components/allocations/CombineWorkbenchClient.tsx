@@ -387,26 +387,53 @@ export function CombineWorkbenchClient({
       if (Array.isArray(data) && data.length > 0) {
         setSuggestedRoutes(data);
         let targetSelectId = "";
-        if (isActionTriggered) {
-          // Automatically select the best matching route when adding or removing requests
+
+        // Smart Route Selection:
+        // 1. Check if user's currently selected route is in the suggestions (exact or corridor)
+        const currentInSuggestions = data.some((r) => String(r.id) === String(selectedRouteId));
+
+        if (selectedRouteId && currentInSuggestions) {
+          // Keep user's chosen route if it is still a valid match
+          targetSelectId = String(selectedRouteId);
+        } else if (isActionTriggered) {
+          // If previous selection was not in suggestions, select best match (data[0])
           targetSelectId = String(data[0].id);
         } else {
-          // On initial load, preserve current if exists in suggestions, else pick best match
-          const exists = data.some((r) => String(r.id) === String(selectedRouteId));
-          targetSelectId = exists ? String(selectedRouteId) : String(data[0].id);
+          // On initial load:
+          const tripRouteInSuggestions = trip?.routeId && data.some((r) => String(r.id) === String(trip.routeId));
+          if (currentInSuggestions) {
+            targetSelectId = String(selectedRouteId);
+          } else if (tripRouteInSuggestions) {
+            targetSelectId = String(trip.routeId);
+          } else if (trip?.routeId && routes && routes.some((rt: any) => String(rt.id) === String(trip.routeId))) {
+            targetSelectId = String(trip.routeId);
+          } else {
+            targetSelectId = String(data[0].id);
+          }
         }
+
         setSelectedRouteId(targetSelectId);
-        const chosen = data.find((r) => String(r.id) === targetSelectId) || data[0];
-        const dist = Number(chosen.total_distance || chosen.total_distance_km || chosen.totalDistanceKm || 0);
+        const chosen = data.find((r) => String(r.id) === targetSelectId) || (routes && routes.find((r: any) => String(r.id) === targetSelectId)) || data[0];
+        const dist = Number(chosen?.total_distance || chosen?.total_distance_km || chosen?.totalDistanceKm || 0);
         setPlannedKm(dist);
         if (isActionTriggered) {
           setHasUnsavedChanges(true);
         }
       } else {
-        // No exact matching routes found
+        // No matching routes found in suggestions
         setSuggestedRoutes([]);
-        setSelectedRouteId("");
-        setPlannedKm(0);
+        // Preserve user's manual route selection from Master Routes if already picked:
+        const isCurrentInMasterRoutes = selectedRouteId && routes && routes.some((rt: any) => String(rt.id) === String(selectedRouteId));
+        if (isCurrentInMasterRoutes) {
+          // Keep selectedRouteId and existing plannedKm
+        } else if (trip?.routeId && routes && routes.some((rt: any) => String(rt.id) === String(trip.routeId))) {
+          setSelectedRouteId(String(trip.routeId));
+          const trRoute = routes.find((rt: any) => String(rt.id) === String(trip.routeId));
+          if (trRoute) setPlannedKm(Number(trRoute.totalDistanceKm || 0));
+        } else {
+          setSelectedRouteId("");
+          setPlannedKm(0);
+        }
         if (isActionTriggered) {
           setHasUnsavedChanges(true);
         }
@@ -1689,11 +1716,13 @@ export function CombineWorkbenchClient({
                 {suggestedRoutes.length > 0 ? (
                   <>
                     <option value="">Select a Suggested Route...</option>
-                    {suggestedRoutes.map((r) => (
-                      <option key={`sug-${r.id}`} value={r.id}>
-                        ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km
-                      </option>
-                    ))}
+                    <optgroup label="✨ Suggested Corridor Routes">
+                      {suggestedRoutes.map((r) => (
+                        <option key={`sug-${r.id}`} value={r.id}>
+                          ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km{r.is_exact ? " (Best Match)" : " (Covers All Stops)"}
+                        </option>
+                      ))}
+                    </optgroup>
                     {routes && routes.length > 0 && (
                       <optgroup label="All Available Routes">
                         {routes.map((r: any) => (
@@ -1750,13 +1779,13 @@ export function CombineWorkbenchClient({
                       rel="noopener noreferrer"
                       className={`text-xs font-bold flex items-center whitespace-nowrap px-2.5 py-1.5 rounded shadow-2xs transition cursor-pointer ${
                         isMissing
-                          ? "text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100"
+                          ? "text-amber-800 bg-amber-50 border border-amber-300 hover:bg-amber-100"
                           : "text-blue-600 bg-white border border-blue-200 hover:bg-blue-50"
                       }`}
-                      title={isMissing ? "Create matching corridor route in Route Master" : "Create new route in Route Master"}
+                      title={isMissing ? "Save matching corridor route in Route Master" : "Create new route in Route Master"}
                     >
-                      <Plus className="w-3.5 h-3.5 mr-1 text-current" />
-                      <span>New Route</span>
+                      {isMissing ? <Save className="w-3.5 h-3.5 mr-1 text-amber-600" /> : <Plus className="w-3.5 h-3.5 mr-1 text-current" />}
+                      <span>{isMissing ? "Save Route" : "New Route"}</span>
                     </a>
                   );
                 })()}
@@ -2696,9 +2725,29 @@ export function CombineWorkbenchClient({
                       {suggestedRoutes.length > 0 ? (
                         <>
                           <option value="">Select a Route...</option>
-                          {suggestedRoutes.map((r) => (
-                            <option key={`ws-sug-${r.id}`} value={r.id}>
-                              {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km
+                          <optgroup label="✨ Suggested Corridor Routes">
+                            {suggestedRoutes.map((r) => (
+                              <option key={`ws-sug-${r.id}`} value={r.id}>
+                                ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km{r.is_exact ? " (Best Match)" : " (Covers All Stops)"}
+                              </option>
+                            ))}
+                          </optgroup>
+                          {routes && routes.length > 0 && (
+                            <optgroup label="All Available Routes">
+                              {routes.map((r: any) => (
+                                <option key={`ws-all-${r.id}`} value={r.id}>
+                                  {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </>
+                      ) : routes && routes.length > 0 ? (
+                        <>
+                          <option value="">No exact suggestion — Choose from All Routes...</option>
+                          {routes.map((r: any) => (
+                            <option key={`ws-fallback-${r.id}`} value={r.id}>
+                              {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
                             </option>
                           ))}
                         </>
@@ -2740,13 +2789,13 @@ export function CombineWorkbenchClient({
                             rel="noopener noreferrer"
                             className={`text-xs font-bold flex items-center whitespace-nowrap px-3 py-2 rounded-lg shadow-2xs transition cursor-pointer ${
                               isMissing
-                                ? "text-amber-800 bg-amber-100 border border-amber-300 hover:bg-amber-200"
+                                ? "text-amber-800 bg-amber-50 border border-amber-300 hover:bg-amber-100"
                                 : "text-blue-700 bg-white border border-blue-200 hover:bg-blue-50"
                             }`}
-                            title={isMissing ? "Create matching corridor route in Route Master" : "Create new route in Route Master"}
+                            title={isMissing ? "Save matching corridor route in Route Master" : "Create new route in Route Master"}
                           >
-                            <Plus className="w-3.5 h-3.5 mr-1 text-current" />
-                            <span>Create New Route</span>
+                            {isMissing ? <Save className="w-3.5 h-3.5 mr-1 text-amber-600" /> : <Plus className="w-3.5 h-3.5 mr-1 text-current" />}
+                            <span>{isMissing ? "Save Route" : "New Route"}</span>
                           </a>
                         );
                       })()}

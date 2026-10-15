@@ -147,12 +147,15 @@ export async function GET(req: NextRequest) {
       const directMatches: any[] = [];
       // B. Priority 2: Terminating routes (stops ending at Destination)
       const terminatingMatches: any[] = [];
+      // C. Priority 3: Passing corridor routes (target is an intermediate stop along the corridor)
+      const passingMatches: any[] = [];
 
       for (const r of candidateRoutes) {
         if (!r.stops || r.stops.length === 0) continue;
 
         const lastStop = r.stops[r.stops.length - 1];
         const isEndAtTarget = matchesAnyAlias(Number(lastStop.locationId), targetId);
+        const hasTargetStop = r.stops.some((s: any) => matchesAnyAlias(Number(s.locationId), targetId));
 
         if (isEndAtTarget) {
           const totalDistance = getRouteDistance(r);
@@ -171,6 +174,17 @@ export async function GET(req: NextRequest) {
           } else {
             terminatingMatches.push(item);
           }
+        } else if (hasTargetStop) {
+          const totalDistance = getRouteDistance(r);
+          passingMatches.push({
+            id: r.id,
+            route_name: r.routeName,
+            route_code: r.routeCode,
+            total_distance: totalDistance,
+            total_distance_km: totalDistance,
+            is_exact: false,
+            stops_count: r.stops.length,
+          });
         }
       }
 
@@ -192,12 +206,19 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(bestTerminating);
       }
 
+      // If no terminating route exists, return passing corridor routes sorted by distance
+      if (passingMatches.length > 0) {
+        passingMatches.sort((a, b) => a.total_distance - b.total_distance);
+        return NextResponse.json(passingMatches);
+      }
+
       // No route reaches this destination from the origin
       return NextResponse.json([]);
     }
 
     // 2. Multiple Destination Requests (Combined Routes Matching)
     const exactCombineMatches: any[] = [];
+    const corridorCombineMatches: any[] = [];
 
     for (const r of candidateRoutes) {
       if (!r.stops || r.stops.length === 0) continue;
@@ -220,23 +241,34 @@ export async function GET(req: NextRequest) {
         targetToIds.some((tId: number) => matchesAnyAlias(rId, tId))
       );
 
-      if (hasAllTargets && noExtraStops) {
+      if (hasAllTargets) {
         const totalDistance = getRouteDistance(r);
-        exactCombineMatches.push({
+        const item = {
           id: r.id,
           route_name: r.routeName,
           route_code: r.routeCode,
           total_distance: totalDistance,
           total_distance_km: totalDistance,
-          is_exact: true,
-        });
+          is_exact: noExtraStops,
+        };
+
+        if (noExtraStops) {
+          exactCombineMatches.push(item);
+        } else {
+          corridorCombineMatches.push(item);
+        }
       }
     }
 
-    // Combine Suggestion: route stops must match requested destinations exactly (no extra stops, no missing stops)
-    if (exactCombineMatches.length > 0) {
-      exactCombineMatches.sort((a, b) => a.total_distance - b.total_distance);
-      return NextResponse.json(exactCombineMatches);
+    // Combine Suggestion:
+    // Priority 1: Exact matches (stops match requested destinations exactly)
+    // Priority 2: Corridor matches (routes that cover all requested cargo destinations along the corridor)
+    exactCombineMatches.sort((a, b) => a.total_distance - b.total_distance);
+    corridorCombineMatches.sort((a, b) => a.total_distance - b.total_distance);
+
+    const allMatches = [...exactCombineMatches, ...corridorCombineMatches];
+    if (allMatches.length > 0) {
+      return NextResponse.json(allMatches);
     }
 
     return NextResponse.json([]);
