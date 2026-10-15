@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorizeApi, isAdmin, can } from "@/lib/permissions";
+import { generateNextRouteCode } from "@/lib/sequence";
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,18 +75,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Route name is required" }, { status: 400 });
     }
 
-    if (!routeCode || !routeCode.trim()) {
-      const count = await prisma.route.count();
-      routeCode = `RTE-${String(count + 1).padStart(4, "0")}`;
-    }
-
     const originLocId = parseInt(originLocationId, 10);
     const totalKm = totalDistanceKm ? parseFloat(totalDistanceKm) : 0;
 
     const createdRoute = await prisma.$transaction(async (tx: any) => {
+      const finalRouteCode = (routeCode && routeCode.trim())
+        ? routeCode.trim().toUpperCase()
+        : await generateNextRouteCode(tx);
+
       const r = await tx.route.create({
         data: {
-          routeCode: routeCode.trim().toUpperCase(),
+          routeCode: finalRouteCode,
           routeName: routeName.trim(),
           businessGroup: businessGroup || "ELASTIC",
           routeGroup: routeGroup || "DIRECT",
@@ -374,12 +374,10 @@ async function syncDirectRoutes(routeId: number) {
       continue;
     }
 
-    // Auto-generate route code
-    const count = await prisma.route.count();
-    const nextCode = `RTE-${String(count + 1).padStart(4, "0")}`;
-    const directName = `${originName} -> ${s.location?.locationName || "Destination"}`;
-
     await prisma.$transaction(async (tx: any) => {
+      const nextCode = await generateNextRouteCode(tx);
+      const directName = `${originName} -> ${s.location?.locationName || "Destination"}`;
+
       const nr = await tx.route.create({
         data: {
           routeCode: nextCode,

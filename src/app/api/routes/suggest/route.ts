@@ -141,76 +141,34 @@ export async function GET(req: NextRequest) {
     if (targetToIds.length === 1) {
       const targetId = targetToIds[0];
 
-      // A. Priority 1: Direct 1-stop routes (Origin -> Destination only, no other stops)
+      // A. Exact Direct 1-stop routes (Origin -> Destination only, no other stops)
       const directMatches: any[] = [];
-      // B. Priority 2: Terminating routes (stops ending at Destination)
-      const terminatingMatches: any[] = [];
-      // C. Priority 3: Passing corridor routes (target is an intermediate stop along the corridor)
-      const passingMatches: any[] = [];
 
       for (const r of candidateRoutes) {
         if (!r.stops || r.stops.length === 0) continue;
 
-        const lastStop = r.stops[r.stops.length - 1];
-        const isEndAtTarget = matchesAnyAlias(Number(lastStop.locationId), targetId);
-        const hasTargetStop = r.stops.some((s: any) => matchesAnyAlias(Number(s.locationId), targetId));
-
-        if (isEndAtTarget) {
+        // Exact match for single allocation: route has strictly 1 delivery stop and it matches target destination
+        if (r.stops.length === 1 && matchesAnyAlias(Number(r.stops[0].locationId), targetId)) {
           const totalDistance = getRouteDistance(r);
-          const item = {
+          directMatches.push({
             id: r.id,
             route_name: r.routeName,
             route_code: r.routeCode,
             total_distance: totalDistance,
             total_distance_km: totalDistance,
             is_exact: true,
-            stops_count: r.stops.length,
-          };
-
-          if (r.stops.length === 1) {
-            directMatches.push(item);
-          } else {
-            terminatingMatches.push(item);
-          }
-        } else if (hasTargetStop) {
-          const totalDistance = getRouteDistance(r);
-          passingMatches.push({
-            id: r.id,
-            route_name: r.routeName,
-            route_code: r.routeCode,
-            total_distance: totalDistance,
-            total_distance_km: totalDistance,
-            is_exact: false,
-            stops_count: r.stops.length,
+            stops_count: 1,
           });
         }
       }
 
-      // If direct 1-stop routes exist, return ONLY direct routes!
-      // This prevents confusing multi-stop routes when a pure direct corridor exists.
+      // If direct 1-stop routes exist, return ONLY direct routes sorted by distance
       if (directMatches.length > 0) {
         directMatches.sort((a, b) => a.total_distance - b.total_distance);
         return NextResponse.json(directMatches);
       }
 
-      // If no 1-stop direct route exists, return the route(s) terminating at target with the fewest stops
-      if (terminatingMatches.length > 0) {
-        terminatingMatches.sort((a, b) => {
-          if (a.stops_count !== b.stops_count) return a.stops_count - b.stops_count;
-          return a.total_distance - b.total_distance;
-        });
-        const minStops = terminatingMatches[0].stops_count;
-        const bestTerminating = terminatingMatches.filter((m) => m.stops_count === minStops);
-        return NextResponse.json(bestTerminating);
-      }
-
-      // If no terminating route exists, return passing corridor routes sorted by distance
-      if (passingMatches.length > 0) {
-        passingMatches.sort((a, b) => a.total_distance - b.total_distance);
-        return NextResponse.json(passingMatches);
-      }
-
-      // No route reaches this destination from the origin
+      // No exact 1-stop direct route exists for this destination
       return NextResponse.json([]);
     }
 

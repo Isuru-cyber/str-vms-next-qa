@@ -146,5 +146,55 @@ export async function generateNextUserCode(client?: any): Promise<string> {
   });
 }
 
+async function internalGenerateNextRouteCode(tx: any): Promise<string> {
+  await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(718294);");
+
+  const routes = await tx.route.findMany({
+    select: { id: true, routeCode: true },
+  });
+
+  let maxNum = 0;
+  for (const r of routes) {
+    if (r.id && r.id > maxNum) {
+      maxNum = r.id;
+    }
+    if (r.routeCode) {
+      const match = r.routeCode.match(/\d+/);
+      if (match) {
+        const parsed = parseInt(match[0], 10);
+        if (!isNaN(parsed) && parsed > maxNum) {
+          maxNum = parsed;
+        }
+      }
+    }
+  }
+
+  let nextNum = maxNum + 1;
+  let attempts = 0;
+  while (attempts < 100) {
+    attempts++;
+    const padLength = Math.max(4, String(nextNum).length);
+    const candidate = `RTE-${String(nextNum).padStart(padLength, "0")}`;
+    const exists = await tx.route.findUnique({
+      where: { routeCode: candidate },
+      select: { id: true },
+    });
+    if (!exists) {
+      return candidate;
+    }
+    nextNum++;
+  }
+  throw new Error("Failed to generate unique route code after 100 attempts.");
+}
+
+export async function generateNextRouteCode(client?: any): Promise<string> {
+  if (client) {
+    return internalGenerateNextRouteCode(client);
+  }
+  return prisma.$transaction(async (tx) => {
+    return internalGenerateNextRouteCode(tx);
+  });
+}
+
 
 
