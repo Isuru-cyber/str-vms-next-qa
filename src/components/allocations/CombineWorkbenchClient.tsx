@@ -420,20 +420,10 @@ export function CombineWorkbenchClient({
           setHasUnsavedChanges(true);
         }
       } else {
-        // No matching routes found in suggestions
+        // No exact matching routes found
         setSuggestedRoutes([]);
-        // Preserve user's manual route selection from Master Routes if already picked:
-        const isCurrentInMasterRoutes = selectedRouteId && routes && routes.some((rt: any) => String(rt.id) === String(selectedRouteId));
-        if (isCurrentInMasterRoutes) {
-          // Keep selectedRouteId and existing plannedKm
-        } else if (trip?.routeId && routes && routes.some((rt: any) => String(rt.id) === String(trip.routeId))) {
-          setSelectedRouteId(String(trip.routeId));
-          const trRoute = routes.find((rt: any) => String(rt.id) === String(trip.routeId));
-          if (trRoute) setPlannedKm(Number(trRoute.totalDistanceKm || 0));
-        } else {
-          setSelectedRouteId("");
-          setPlannedKm(0);
-        }
+        setSelectedRouteId("");
+        setPlannedKm(0);
         if (isActionTriggered) {
           setHasUnsavedChanges(true);
         }
@@ -1774,7 +1764,7 @@ export function CombineWorkbenchClient({
                   const isMissing = suggestedRoutes.length === 0 && !selectedRouteId;
                   return (
                     <a
-                      href={isMissing ? `/routes/create?origin_id=${fromId}&stop_ids=${toIds}&return_to=allocation` : "/routes/create"}
+                      href={fromId && toIds ? `/routes/create?origin_id=${fromId}&stop_ids=${toIds}&return_to=allocation` : "/routes/create"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`text-xs font-bold flex items-center whitespace-nowrap px-2.5 py-1.5 rounded shadow-2xs transition cursor-pointer ${
@@ -2775,7 +2765,7 @@ export function CombineWorkbenchClient({
                         className="bg-blue-600 text-white px-3.5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-2xs whitespace-nowrap cursor-pointer flex items-center gap-1"
                       >
                         <Save className="w-3.5 h-3.5" />
-                        <span>{saving ? "Saving..." : "Save Route"}</span>
+                        <span>{saving ? "Saving..." : "Save Allocation"}</span>
                       </button>
 
                       {(() => {
@@ -2784,7 +2774,7 @@ export function CombineWorkbenchClient({
                         const isMissing = suggestedRoutes.length === 0 && !selectedRouteId;
                         return (
                           <a
-                            href={isMissing ? `/routes/create?origin_id=${fromId}&stop_ids=${toIds}&return_to=allocation` : "/routes/create"}
+                            href={fromId && toIds ? `/routes/create?origin_id=${fromId}&stop_ids=${toIds}&return_to=allocation` : "/routes/create"}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`text-xs font-bold flex items-center whitespace-nowrap px-3 py-2 rounded-lg shadow-2xs transition cursor-pointer ${

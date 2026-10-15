@@ -218,7 +218,6 @@ export async function GET(req: NextRequest) {
 
     // 2. Multiple Destination Requests (Combined Routes Matching)
     const exactCombineMatches: any[] = [];
-    const corridorCombineMatches: any[] = [];
 
     for (const r of candidateRoutes) {
       if (!r.stops || r.stops.length === 0) continue;
@@ -241,34 +240,23 @@ export async function GET(req: NextRequest) {
         targetToIds.some((tId: number) => matchesAnyAlias(rId, tId))
       );
 
-      if (hasAllTargets) {
+      if (hasAllTargets && noExtraStops) {
         const totalDistance = getRouteDistance(r);
-        const item = {
+        exactCombineMatches.push({
           id: r.id,
           route_name: r.routeName,
           route_code: r.routeCode,
           total_distance: totalDistance,
           total_distance_km: totalDistance,
-          is_exact: noExtraStops,
-        };
-
-        if (noExtraStops) {
-          exactCombineMatches.push(item);
-        } else {
-          corridorCombineMatches.push(item);
-        }
+          is_exact: true,
+        });
       }
     }
 
-    // Combine Suggestion:
-    // Priority 1: Exact matches (stops match requested destinations exactly)
-    // Priority 2: Corridor matches (routes that cover all requested cargo destinations along the corridor)
-    exactCombineMatches.sort((a, b) => a.total_distance - b.total_distance);
-    corridorCombineMatches.sort((a, b) => a.total_distance - b.total_distance);
-
-    const allMatches = [...exactCombineMatches, ...corridorCombineMatches];
-    if (allMatches.length > 0) {
-      return NextResponse.json(allMatches);
+    // Combine Suggestion: route stops must match requested destinations exactly (no extra stops, no missing stops)
+    if (exactCombineMatches.length > 0) {
+      exactCombineMatches.sort((a, b) => a.total_distance - b.total_distance);
+      return NextResponse.json(exactCombineMatches);
     }
 
     return NextResponse.json([]);

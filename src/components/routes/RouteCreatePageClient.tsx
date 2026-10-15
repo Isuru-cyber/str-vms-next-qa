@@ -418,10 +418,14 @@ export function RouteCreatePageClient({
         </div>
 
         <div className="flex items-center gap-2">
-          {returnTo === 'allocation' && (
+          {(returnTo === 'allocation' || returnTo === 'combine') && (
             <button
               type="button"
-              onClick={() => window.close()}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.close();
+                }
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
@@ -461,10 +465,14 @@ export function RouteCreatePageClient({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {returnTo === 'allocation' && (
+            {(returnTo === 'allocation' || returnTo === 'combine') && (
               <button
                 type="button"
-                onClick={() => window.close()}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.close();
+                  }
+                }}
                 className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-colors shadow-2xs cursor-pointer"
               >
                 Close & Return to Allocation
@@ -842,7 +850,7 @@ export function RouteCreatePageClient({
           <button
             type="button"
             onClick={() => {
-              if (returnTo === 'allocation' && typeof window !== 'undefined') {
+              if ((returnTo === 'allocation' || returnTo === 'combine') && typeof window !== 'undefined') {
                 window.close();
               } else {
                 router.push('/routes');
