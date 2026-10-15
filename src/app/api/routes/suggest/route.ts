@@ -32,9 +32,6 @@ async function resolveLocationAliases(targetIds: number[]): Promise<Map<number, 
 
     const conditions: any[] = [];
     for (const loc of locations) {
-      if (loc.code && loc.code.trim().length > 0) {
-        conditions.push({ code: loc.code.trim() });
-      }
       if (loc.locationName && loc.locationName.trim().length > 2) {
         conditions.push({ locationName: { equals: loc.locationName.trim(), mode: "insensitive" } });
       }
@@ -53,8 +50,9 @@ async function resolveLocationAliases(targetIds: number[]): Promise<Map<number, 
         const set = aliasMap.get(loc.id) || new Set<number>([loc.id]);
         for (const syn of synonyms) {
           if (
-            (loc.code && syn.code && loc.code.trim().toLowerCase() === syn.code.trim().toLowerCase()) ||
-            (loc.locationName && syn.locationName && loc.locationName.trim().toLowerCase() === syn.locationName.trim().toLowerCase())
+            loc.locationName &&
+            syn.locationName &&
+            loc.locationName.trim().toLowerCase() === syn.locationName.trim().toLowerCase()
           ) {
             set.add(syn.id);
           }
