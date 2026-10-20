@@ -32,6 +32,12 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Package,
+  MapPin,
+  FileCheck2,
+  DollarSign,
+  Gauge,
+  Phone,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatNumber, formatCurrency } from "@/lib/utils";
@@ -65,6 +71,9 @@ export function FullTripDetailsClient({
   const [trips, setTrips] = useState<any[]>(initialTrips);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Side Drawer Selected Trip (Opens when clicking any row)
+  const [selectedTrip, setSelectedTrip] = useState<any | null>(null);
+
   // Filter Toggle state: By default, advanced filters are hidden
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -86,9 +95,33 @@ export function FullTripDetailsClient({
 
   // Quick Inline Edit State
   const [savingId, setSavingId] = useState<number | null>(null);
-  const [remarksModalTrip, setRemarksModalTrip] = useState<any | null>(null);
-  const [modalRemarksText, setModalRemarksText] = useState("");
-  const [savingRemarks, setSavingRemarks] = useState(false);
+  const [drawerRemarksText, setDrawerRemarksText] = useState("");
+  const [savingDrawerRemarks, setSavingDrawerRemarks] = useState(false);
+
+  // Sync drawer remarks text when selectedTrip changes
+  useEffect(() => {
+    if (selectedTrip) {
+      setDrawerRemarksText(selectedTrip.adminRemarks || "");
+    }
+  }, [selectedTrip]);
+
+  // If initialTrips is empty, automatically fetch from API on mount
+  useEffect(() => {
+    if (trips.length === 0) {
+      handleRefreshData();
+    }
+  }, []);
+
+  // Keyboard shortcut: close drawer on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedTrip(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Count active advanced filters
   const activeAdvancedFiltersCount = useMemo(() => {
@@ -331,7 +364,7 @@ export function FullTripDetailsClient({
     return filteredTrips.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredTrips, currentPage]);
 
-  // Update classification inline
+  // Update classification inline or from drawer
   const handleUpdateClassification = async (
     tripId: number,
     field: "deliveryWindow" | "planningType" | "requestedByDept",
@@ -349,8 +382,14 @@ export function FullTripDetailsClient({
         throw new Error(data.message || "Failed to update classification.");
       }
 
+      // Update in trips list
       setTrips((prev) =>
         prev.map((t) => (t.id === tripId ? { ...t, [field]: value } : t))
+      );
+
+      // Update in selectedTrip if drawer is open
+      setSelectedTrip((prev: any) =>
+        prev && prev.id === tripId ? { ...prev, [field]: value } : prev
       );
     } catch (e: any) {
       alert(e.message || "Failed to update classification.");
@@ -359,15 +398,15 @@ export function FullTripDetailsClient({
     }
   };
 
-  // Save Remarks modal
-  const handleSaveRemarks = async () => {
-    if (!remarksModalTrip) return;
-    setSavingRemarks(true);
+  // Save Remarks from Drawer
+  const handleSaveDrawerRemarks = async () => {
+    if (!selectedTrip) return;
+    setSavingDrawerRemarks(true);
     try {
-      const res = await fetch(`/api/trips/${remarksModalTrip.id}/classification`, {
+      const res = await fetch(`/api/trips/${selectedTrip.id}/classification`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminRemarks: modalRemarksText }),
+        body: JSON.stringify({ adminRemarks: drawerRemarksText }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -376,14 +415,17 @@ export function FullTripDetailsClient({
 
       setTrips((prev) =>
         prev.map((t) =>
-          t.id === remarksModalTrip.id ? { ...t, adminRemarks: modalRemarksText } : t
+          t.id === selectedTrip.id ? { ...t, adminRemarks: drawerRemarksText } : t
         )
       );
-      setRemarksModalTrip(null);
+      setSelectedTrip((prev: any) =>
+        prev ? { ...prev, adminRemarks: drawerRemarksText } : prev
+      );
+      alert("Remarks updated successfully!");
     } catch (e: any) {
       alert(e.message || "Failed to save remarks.");
     } finally {
-      setSavingRemarks(false);
+      setSavingDrawerRemarks(false);
     }
   };
 
@@ -543,7 +585,7 @@ export function FullTripDetailsClient({
   }, [filteredTrips]);
 
   return (
-    <div className="w-full h-[calc(100vh-62px)] flex flex-col p-1.5 sm:p-2 space-y-1.5 overflow-hidden bg-slate-50">
+    <div className="w-full h-[calc(100vh-80px)] flex flex-col space-y-2 overflow-hidden bg-slate-50 relative">
       {/* COMPACT TOP TOOLBAR: Minimal height, full horizontal space */}
       <div className="bg-white rounded-xl border border-slate-200 px-3 py-2 shadow-xs shrink-0 flex flex-wrap items-center justify-between gap-2">
         {/* Left: Brand Badge + Date Filter (Always Visible) + Filters Toggle */}
@@ -853,76 +895,76 @@ export function FullTripDetailsClient({
 
       {/* TAB CONTENT 1: FULL DATA GRID (Fills Remaining Screen Height) */}
       {activeTab === "REGISTRY" && (
-        <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          {/* Scrollable Table Area */}
+        <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden">
+          {/* Scrollable Table Area: Clear grid lines, NO line merge, NO line wrap */}
           <div className="flex-1 overflow-auto">
-            <table className="w-full border-collapse text-left text-xs min-w-[3200px]">
-              <thead className="sticky top-0 bg-slate-900 text-white z-20 text-[11px] uppercase tracking-wider font-semibold shadow-sm">
+            <table className="w-full border-collapse border border-slate-300 text-left text-xs min-w-[3400px]">
+              <thead className="sticky top-0 bg-slate-900 text-white z-20 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-800">
                 <tr className="divide-x divide-slate-800">
-                  <th className="py-2.5 px-2.5 w-12 text-center">#</th>
-                  <th className="py-2.5 px-3 min-w-[120px]">Trip No</th>
-                  <th className="py-2.5 px-3 min-w-[110px]">Status</th>
-                  <th className="py-2.5 px-3 min-w-[100px]">Allocation Date</th>
+                  <th className="py-2.5 px-3 w-12 text-center border-r border-slate-800">#</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Trip No</th>
+                  <th className="py-2.5 px-3.5 min-w-[120px] border-r border-slate-800">Status</th>
+                  <th className="py-2.5 px-3.5 min-w-[110px] border-r border-slate-800">Allocation Date</th>
                   
                   {/* EDITABLE CLASSIFICATION COLUMNS (4 Allowed) */}
-                  <th className="py-2.5 px-3 min-w-[190px] bg-indigo-950 text-indigo-200">
+                  <th className="py-2.5 px-3.5 min-w-[200px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
                     Delivery Window ✏️
                   </th>
-                  <th className="py-2.5 px-3 min-w-[140px] bg-indigo-950 text-indigo-200">
+                  <th className="py-2.5 px-3.5 min-w-[150px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
                     Planning Type ✏️
                   </th>
-                  <th className="py-2.5 px-3 min-w-[170px] bg-indigo-950 text-indigo-200">
+                  <th className="py-2.5 px-3.5 min-w-[180px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
                     Requested By ✏️
                   </th>
                   
                   {/* OPERATIONAL / REQUEST DETAILS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3 min-w-[180px]">Combined Requests</th>
-                  <th className="py-2.5 px-3 min-w-[80px]">Plant</th>
-                  <th className="py-2.5 px-3 min-w-[190px]">Corridor Route</th>
-                  <th className="py-2.5 px-3 min-w-[180px]">Pickup Origin</th>
-                  <th className="py-2.5 px-3 min-w-[200px]">Delivery Destinations</th>
-                  <th className="py-2.5 px-3 min-w-[180px]">Cargo Description</th>
-                  <th className="py-2.5 px-3 min-w-[90px] text-center">Boxes</th>
-                  <th className="py-2.5 px-3 min-w-[100px] text-right">Net Weight</th>
-                  <th className="py-2.5 px-3 min-w-[90px] text-right">Volume</th>
+                  <th className="py-2.5 px-3.5 min-w-[200px] border-r border-slate-800">Combined Requests</th>
+                  <th className="py-2.5 px-3.5 min-w-[90px] border-r border-slate-800">Plant</th>
+                  <th className="py-2.5 px-3.5 min-w-[220px] border-r border-slate-800">Corridor Route</th>
+                  <th className="py-2.5 px-3.5 min-w-[200px] border-r border-slate-800">Pickup Origin</th>
+                  <th className="py-2.5 px-3.5 min-w-[220px] border-r border-slate-800">Delivery Destinations</th>
+                  <th className="py-2.5 px-3.5 min-w-[200px] border-r border-slate-800">Cargo Description</th>
+                  <th className="py-2.5 px-3.5 min-w-[95px] text-center border-r border-slate-800">Boxes</th>
+                  <th className="py-2.5 px-3.5 min-w-[110px] text-right border-r border-slate-800">Net Weight</th>
+                  <th className="py-2.5 px-3.5 min-w-[100px] text-right border-r border-slate-800">Volume</th>
                   
                   {/* FLEET & DRIVER DETAILS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3 min-w-[130px]">Vehicle Plate</th>
-                  <th className="py-2.5 px-3 min-w-[120px]">Category</th>
-                  <th className="py-2.5 px-3 min-w-[130px]">Ownership / Basis</th>
-                  <th className="py-2.5 px-3 min-w-[140px]">Driver</th>
-                  <th className="py-2.5 px-3 min-w-[110px]">Driver Mobile</th>
+                  <th className="py-2.5 px-3.5 min-w-[140px] border-r border-slate-800">Vehicle Plate</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Category</th>
+                  <th className="py-2.5 px-3.5 min-w-[140px] border-r border-slate-800">Ownership / Basis</th>
+                  <th className="py-2.5 px-3.5 min-w-[150px] border-r border-slate-800">Driver</th>
+                  <th className="py-2.5 px-3.5 min-w-[120px] border-r border-slate-800">Driver Mobile</th>
                   
                   {/* GATE PASS & ACTUALS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3 min-w-[140px]">Gate Passes</th>
-                  <th className="py-2.5 px-3 min-w-[120px]">Departure Time</th>
-                  <th className="py-2.5 px-3 min-w-[120px]">Completion Time</th>
-                  <th className="py-2.5 px-3 min-w-[95px] text-right">Planned KM</th>
-                  <th className="py-2.5 px-3 min-w-[95px] text-right">Actual KM</th>
-                  <th className="py-2.5 px-3 min-w-[95px] text-right">Variance KM</th>
-                  <th className="py-2.5 px-3 min-w-[140px]">Variance Reason</th>
+                  <th className="py-2.5 px-3.5 min-w-[150px] border-r border-slate-800">Gate Passes</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Departure Time</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Completion Time</th>
+                  <th className="py-2.5 px-3.5 min-w-[105px] text-right border-r border-slate-800">Planned KM</th>
+                  <th className="py-2.5 px-3.5 min-w-[105px] text-right border-r border-slate-800">Actual KM</th>
+                  <th className="py-2.5 px-3.5 min-w-[105px] text-right border-r border-slate-800">Variance KM</th>
+                  <th className="py-2.5 px-3.5 min-w-[150px] border-r border-slate-800">Variance Reason</th>
                   
                   {/* FINANCIAL / COST DETAILS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3 min-w-[100px] text-right">Diesel Rate</th>
-                  <th className="py-2.5 px-3 min-w-[105px] text-right">Fuel Cost</th>
-                  <th className="py-2.5 px-3 min-w-[105px] text-right">Running Cost</th>
-                  <th className="py-2.5 px-3 min-w-[105px] text-right">Driver Profit</th>
-                  <th className="py-2.5 px-3 min-w-[110px] text-right">Fixed Daily Share</th>
-                  <th className="py-2.5 px-3 min-w-[120px] text-right bg-slate-950 font-bold">Total Trip Cost</th>
+                  <th className="py-2.5 px-3.5 min-w-[110px] text-right border-r border-slate-800">Diesel Rate</th>
+                  <th className="py-2.5 px-3.5 min-w-[115px] text-right border-r border-slate-800">Fuel Cost</th>
+                  <th className="py-2.5 px-3.5 min-w-[115px] text-right border-r border-slate-800">Running Cost</th>
+                  <th className="py-2.5 px-3.5 min-w-[115px] text-right border-r border-slate-800">Driver Profit</th>
+                  <th className="py-2.5 px-3.5 min-w-[120px] text-right border-r border-slate-800">Fixed Daily Share</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] text-right bg-slate-950 font-bold border-r border-slate-800">Total Trip Cost</th>
                   
                   {/* DATATEX RECONCILIATION & CLOSURE (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3 min-w-[120px]">Datatex Status</th>
-                  <th className="py-2.5 px-3 min-w-[160px]">Commercial Invoices</th>
-                  <th className="py-2.5 px-3 min-w-[120px]">Completed By</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Datatex Status</th>
+                  <th className="py-2.5 px-3.5 min-w-[170px] border-r border-slate-800">Commercial Invoices</th>
+                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Completed By</th>
                   
                   {/* EDITABLE REMARKS COLUMN */}
-                  <th className="py-2.5 px-3 min-w-[200px] bg-indigo-950 text-indigo-200">
+                  <th className="py-2.5 px-3.5 min-w-[220px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
                     Remarks / Notes ✏️
                   </th>
-                  <th className="py-2.5 px-2.5 w-14 text-center">Action</th>
+                  <th className="py-2.5 px-2.5 w-16 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {paginatedTrips.length === 0 ? (
                   <tr>
                     <td colSpan={37} className="py-16 text-center text-slate-400">
@@ -959,35 +1001,38 @@ export function FullTripDetailsClient({
                       t.vehicle?.ownershipType === "ADHOC" ||
                       (t.vehicle?.vehicleType || "").toUpperCase().includes("AD-HOC");
 
+                    const isSelected = selectedTrip?.id === t.id;
+
                     return (
                       <tr
                         key={t.id}
-                        className="hover:bg-slate-50/90 transition-colors divide-x divide-slate-100"
+                        onClick={() => setSelectedTrip(t)}
+                        title="Click row to open 360° side details drawer"
+                        className={`transition-colors divide-x divide-slate-200 cursor-pointer ${
+                          isSelected
+                            ? "bg-indigo-100/90 font-medium"
+                            : "hover:bg-indigo-50/70"
+                        }`}
                       >
                         {/* Index */}
-                        <td className="py-2 px-2 text-center text-slate-400 font-mono text-[11px]">
+                        <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] whitespace-nowrap border-r border-slate-200">
                           {rowGlobalIndex}
                         </td>
 
-                        {/* Trip No (Clickable link to Combine Workbench) */}
-                        <td className="py-2 px-3 font-bold text-slate-900 font-mono whitespace-nowrap">
-                          <Link
-                            href={`/allocations/fg/combine/${t.id}`}
-                            className="text-indigo-600 hover:underline flex items-center gap-1"
-                            title="Open Combine Workbench"
-                          >
+                        {/* Trip No */}
+                        <td className="py-2 px-3.5 font-bold text-slate-900 font-mono whitespace-nowrap border-r border-slate-200">
+                          <span className="text-indigo-600 hover:underline flex items-center gap-1">
                             <span>{t.tripNo}</span>
-                            <ExternalLink className="w-3 h-3 text-slate-400" />
-                          </Link>
+                          </span>
                         </td>
 
                         {/* Status */}
-                        <td className="py-2 px-3 whitespace-nowrap">
+                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200">
                           <StatusBadge status={t.status} />
                         </td>
 
                         {/* Allocation Date */}
-                        <td className="py-2 px-3 text-slate-600 whitespace-nowrap text-[11px]">
+                        <td className="py-2 px-3.5 text-slate-600 whitespace-nowrap text-[11px] border-r border-slate-200">
                           {t.createdAt
                             ? new Date(t.createdAt).toLocaleDateString("en-US", {
                                 month: "short",
@@ -998,7 +1043,10 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* 1. EDITABLE: Delivery Window */}
-                        <td className="py-1 px-2 bg-indigo-50/40">
+                        <td
+                          className="py-1 px-2.5 bg-indigo-50/40 border-r border-slate-200 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <select
                             value={t.deliveryWindow || ""}
                             onChange={(e) =>
@@ -1017,7 +1065,10 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* 2. EDITABLE: Planning Type */}
-                        <td className="py-1 px-2 bg-indigo-50/40">
+                        <td
+                          className="py-1 px-2.5 bg-indigo-50/40 border-r border-slate-200 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <select
                             value={t.planningType || "Planned"}
                             onChange={(e) =>
@@ -1039,7 +1090,10 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* 3. EDITABLE: Requested By Dept */}
-                        <td className="py-1 px-2 bg-indigo-50/40">
+                        <td
+                          className="py-1 px-2.5 bg-indigo-50/40 border-r border-slate-200 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <select
                             value={t.requestedByDept || ""}
                             onChange={(e) =>
@@ -1058,79 +1112,66 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Request Codes */}
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          <div className="flex flex-wrap gap-1 max-w-[220px]">
-                            {reqList.length > 0 ? (
-                              reqList.map((r: any) => (
-                                <Link
-                                  key={r.id}
-                                  href={`/requests/${r.id}`}
-                                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-mono text-[10px] border border-slate-200"
-                                  title={`${r.requestCode}: ${r.itemDescription || ""}`}
-                                >
-                                  {r.requestCode}
-                                </Link>
-                              ))
-                            ) : (
-                              <span className="text-slate-400 italic text-[11px]">None</span>
-                            )}
-                          </div>
+                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200 font-mono text-[11px] text-slate-700">
+                          {reqList.length > 0 ? (
+                            reqList.map((r: any) => r.requestCode).join(", ")
+                          ) : (
+                            <span className="text-slate-400 italic">None</span>
+                          )}
                         </td>
 
                         {/* Plant */}
-                        <td className="py-2 px-3 whitespace-nowrap font-bold text-slate-800">
+                        <td className="py-2 px-3.5 whitespace-nowrap font-bold text-slate-800 border-r border-slate-200">
                           {plants || "-"}
                         </td>
 
                         {/* Route Corridor */}
-                        <td className="py-2 px-3 max-w-[200px] truncate" title={t.route?.routeName || ""}>
-                          <span className="font-medium text-slate-800">
-                            {t.route?.routeName || "Combined Corridor"}
-                          </span>
+                        <td className="py-2 px-3.5 whitespace-nowrap font-medium text-slate-800 border-r border-slate-200" title={t.route?.routeName || ""}>
+                          {t.route?.routeName || "Combined Corridor"}
                         </td>
 
                         {/* Pickup Origin */}
-                        <td className="py-2 px-3 max-w-[180px] truncate text-slate-600" title={origins}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-r border-slate-200" title={origins}>
                           {origins || "-"}
                         </td>
 
                         {/* Delivery Destinations */}
-                        <td className="py-2 px-3 max-w-[200px] truncate text-slate-600" title={destinations}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-r border-slate-200" title={destinations}>
                           {destinations || "-"}
                         </td>
 
                         {/* Cargo Description */}
-                        <td className="py-2 px-3 max-w-[180px] truncate text-slate-600" title={cargoDescriptions}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-r border-slate-200" title={cargoDescriptions}>
                           {cargoDescriptions || "-"}
                         </td>
 
                         {/* Boxes */}
-                        <td className="py-2 px-3 text-center whitespace-nowrap font-bold text-slate-900">
+                        <td className="py-2 px-3.5 text-center whitespace-nowrap font-bold text-slate-900 border-r border-slate-200">
                           {totalBoxes || "-"}
                         </td>
 
                         {/* Net Weight */}
-                        <td className="py-2 px-3 text-right whitespace-nowrap font-medium text-slate-800">
+                        <td className="py-2 px-3.5 text-right whitespace-nowrap font-medium text-slate-800 border-r border-slate-200">
                           {totalKg ? `${formatNumber(totalKg, 0)} kg` : "-"}
                         </td>
 
                         {/* Volume */}
-                        <td className="py-2 px-3 text-right whitespace-nowrap text-slate-600">
+                        <td className="py-2 px-3.5 text-right whitespace-nowrap text-slate-600 border-r border-slate-200">
                           {totalCbm ? `${formatNumber(totalCbm, 2)} cbm` : "-"}
                         </td>
 
                         {/* Vehicle Plate */}
-                        <td className="py-2 px-3 whitespace-nowrap font-bold text-slate-900">
+                        <td className="py-2 px-3.5 whitespace-nowrap font-bold text-slate-900 border-r border-slate-200">
                           {t.vehicle?.vehicleNumber || "Unassigned"}
                         </td>
 
                         {/* Vehicle Category */}
-                        <td className="py-2 px-3 whitespace-nowrap text-[11px] text-slate-600">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-[11px] text-slate-600 border-r border-slate-200">
                           {t.vehicle?.vehicleCategory || t.vehicle?.vehicleType || "-"}
                         </td>
 
                         {/* Ownership / Basis */}
-                        <td className="py-2 px-3 whitespace-nowrap">
+                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200">
                           {isAdhoc ? (
                             <span className="text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded text-[10px] border border-amber-200">
                               Outside Ad-Hoc
@@ -1143,17 +1184,17 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Driver */}
-                        <td className="py-2 px-3 whitespace-nowrap font-medium text-slate-900">
+                        <td className="py-2 px-3.5 whitespace-nowrap font-medium text-slate-900 border-r border-slate-200">
                           {t.driver?.name || "Unassigned"}
                         </td>
 
                         {/* Driver Mobile */}
-                        <td className="py-2 px-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-500 font-mono text-[11px] border-r border-slate-200">
                           {t.driver?.mobile || "-"}
                         </td>
 
                         {/* Gate Passes */}
-                        <td className="py-2 px-3 whitespace-nowrap text-[11px]">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-[11px] border-r border-slate-200">
                           {t.gatePasses && t.gatePasses.length > 0 ? (
                             <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-900 font-mono font-bold">
                               {t.gatePasses.map((g: any) => g.gatePassNo).join(", ")}
@@ -1164,31 +1205,31 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Departure Time */}
-                        <td className="py-2 px-3 whitespace-nowrap text-slate-600 text-[11px]">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-r border-slate-200">
                           {t.actualStart
                             ? new Date(t.actualStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             : "-"}
                         </td>
 
                         {/* Completion Time */}
-                        <td className="py-2 px-3 whitespace-nowrap text-slate-600 text-[11px]">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-r border-slate-200">
                           {t.actualEnd
                             ? new Date(t.actualEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             : "-"}
                         </td>
 
                         {/* Planned KM */}
-                        <td className="py-2 px-3 text-right font-mono font-medium text-slate-700 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono font-medium text-slate-700 whitespace-nowrap border-r border-slate-200">
                           {formatNumber(t.plannedKm || 0, 1)} km
                         </td>
 
                         {/* Actual KM */}
-                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap border-r border-slate-200">
                           {t.actualKm ? `${formatNumber(t.actualKm, 1)} km` : "-"}
                         </td>
 
                         {/* Variance KM */}
-                        <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono whitespace-nowrap border-r border-slate-200">
                           {t.varianceKm !== null && t.varianceKm !== undefined ? (
                             <span className={Number(t.varianceKm) > 0 ? "text-rose-600 font-bold" : "text-emerald-600 font-bold"}>
                               {Number(t.varianceKm) > 0 ? `+${formatNumber(t.varianceKm, 1)}` : formatNumber(t.varianceKm, 1)} km
@@ -1197,42 +1238,42 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Variance Reason */}
-                        <td className="py-2 px-3 max-w-[150px] truncate text-slate-500 text-[11px]" title={t.varianceReason || ""}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-500 text-[11px] border-r border-slate-200" title={t.varianceReason || ""}>
                           {t.varianceReason || "-"}
                         </td>
 
                         {/* Diesel Rate */}
-                        <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-600 whitespace-nowrap border-r border-slate-200">
                           {t.dieselRateApplied ? `Rs. ${formatNumber(t.dieselRateApplied, 2)}` : "-"}
                         </td>
 
                         {/* Fuel Cost */}
-                        <td className="py-2 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
                           {t.fuelCost ? `Rs. ${formatNumber(t.fuelCost, 2)}` : "-"}
                         </td>
 
                         {/* Running Cost */}
-                        <td className="py-2 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
                           {t.runningCost ? `Rs. ${formatNumber(t.runningCost, 2)}` : "-"}
                         </td>
 
                         {/* Driver Profit */}
-                        <td className="py-2 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
                           {t.driverProfit ? `Rs. ${formatNumber(t.driverProfit, 2)}` : "-"}
                         </td>
 
                         {/* Daily Fixed Share */}
-                        <td className="py-2 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
                           {t.fixedDailyCost ? `Rs. ${formatNumber(t.fixedDailyCost, 2)}` : "-"}
                         </td>
 
                         {/* Total Trip Cost */}
-                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap bg-slate-50">
+                        <td className="py-2 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap bg-slate-50 border-r border-slate-200">
                           {t.totalTripCost ? `Rs. ${formatNumber(t.totalTripCost, 2)}` : "-"}
                         </td>
 
                         {/* Datatex Reconciled Status */}
-                        <td className="py-2 px-3 whitespace-nowrap">
+                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200">
                           {lastRec ? (
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                               lastRec.matchStatus === "MATCHED"
@@ -1247,37 +1288,27 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Commercial Invoices */}
-                        <td className="py-2 px-3 max-w-[160px] truncate text-slate-600 font-mono text-[11px]" title={lastRec?.invoiceNumbers || ""}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 font-mono text-[11px] border-r border-slate-200" title={lastRec?.invoiceNumbers || ""}>
                           {lastRec?.invoiceNumbers || "-"}
                         </td>
 
                         {/* Completed By User */}
-                        <td className="py-2 px-3 whitespace-nowrap text-slate-600 text-[11px]">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-r border-slate-200">
                           {t.completedByUser?.name || "-"}
                         </td>
 
                         {/* 4. EDITABLE: Remarks / Notes */}
-                        <td className="py-1 px-2.5 max-w-[220px] bg-indigo-50/20">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="truncate text-slate-700 text-[11px]" title={t.adminRemarks || ""}>
-                              {t.adminRemarks || <span className="text-slate-400 italic">No notes</span>}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setRemarksModalTrip(t);
-                                setModalRemarksText(t.adminRemarks || "");
-                              }}
-                              className="text-indigo-600 hover:text-indigo-800 p-1 rounded hover:bg-indigo-100 cursor-pointer transition shrink-0"
-                              title="Edit Remarks"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                        <td className="py-1 px-3 whitespace-nowrap bg-indigo-50/20 border-r border-slate-200">
+                          <span className="text-slate-700 text-[11px]">
+                            {t.adminRemarks || <span className="text-slate-400 italic">No notes</span>}
+                          </span>
                         </td>
 
                         {/* Action Link to Manifest */}
-                        <td className="py-2 px-2 text-center whitespace-nowrap">
+                        <td
+                          className="py-2 px-2.5 text-center whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Link
                             href={`/trips/${t.id}`}
                             className="p-1 rounded bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 inline-flex items-center justify-center transition"
@@ -1574,59 +1605,388 @@ export function FullTripDetailsClient({
         </div>
       )}
 
-      {/* EDIT REMARKS MODAL */}
-      {remarksModalTrip && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-900">
-                  Trip Remarks: {remarksModalTrip.tripNo}
-                </h3>
+      {/* ROW-CLICK SIDE DRAWER POPUP OVERLAY */}
+      {selectedTrip && (
+        <>
+          {/* Backdrop (Clicking outside auto-closes drawer) */}
+          <div
+            onClick={() => setSelectedTrip(null)}
+            className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-2xs transition-opacity animate-in fade-in duration-150"
+          />
+
+          {/* Side Drawer Panel */}
+          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[560px] md:w-[640px] bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-600 text-white rounded-lg">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold font-mono">{selectedTrip.tripNo}</h2>
+                    <StatusBadge status={selectedTrip.status} />
+                  </div>
+                  <span className="text-[11px] text-slate-300">
+                    Allocated on{" "}
+                    {selectedTrip.createdAt
+                      ? new Date(selectedTrip.createdAt).toLocaleDateString()
+                      : "-"}
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setRemarksModalTrip(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href={`/allocations/fg/combine/${selectedTrip.id}`}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-semibold flex items-center gap-1 transition"
+                  title="Open in Combine Workbench"
+                >
+                  <span>Workbench</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+                <Link
+                  href={`/trips/${selectedTrip.id}`}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-1 transition"
+                  title="Open Trip Manifest"
+                >
+                  <Eye className="w-3 h-3" />
+                  <span>Manifest</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTrip(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                  title="Close (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-5 space-y-3">
-              <p className="text-xs text-slate-500">
-                Add or update operational notes, delivery issues, or audit remarks for this trip.
-              </p>
-              <textarea
-                rows={4}
-                value={modalRemarksText}
-                onChange={(e) => setModalRemarksText(e.target.value)}
-                placeholder="Enter remarks here..."
-                className="w-full p-3 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-slate-800"
-              />
-            </div>
+            {/* Drawer Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+              {/* SECTION 1: QUICK INLINE CLASSIFICATION & EDIT (At Top) */}
+              <div className="bg-indigo-50/80 rounded-xl border border-indigo-200 p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 text-indigo-950 font-bold text-xs uppercase tracking-wider">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>Quick Classification &amp; Operational Notes</span>
+                </div>
 
-            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50">
-              <button
-                type="button"
-                onClick={() => setRemarksModalTrip(null)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveRemarks}
-                disabled={savingRemarks}
-                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{savingRemarks ? "Saving..." : "Save Remarks"}</span>
-              </button>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Delivery Window */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Delivery Window
+                    </label>
+                    <select
+                      value={selectedTrip.deliveryWindow || ""}
+                      onChange={(e) =>
+                        handleUpdateClassification(selectedTrip.id, "deliveryWindow", e.target.value)
+                      }
+                      className="w-full bg-white border border-indigo-300 rounded-lg py-1.5 px-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">-- Select Window --</option>
+                      {masterOptions.deliveryWindows.map((dw) => (
+                        <option key={dw.code} value={dw.name}>
+                          {dw.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Planning Type */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Planning Category
+                    </label>
+                    <select
+                      value={selectedTrip.planningType || "Planned"}
+                      onChange={(e) =>
+                        handleUpdateClassification(selectedTrip.id, "planningType", e.target.value)
+                      }
+                      className="w-full bg-white border border-indigo-300 rounded-lg py-1.5 px-2 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    >
+                      {masterOptions.planningTypes.map((pt) => (
+                        <option key={pt.code} value={pt.name}>
+                          {pt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Requested By */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Requested By Dept
+                    </label>
+                    <select
+                      value={selectedTrip.requestedByDept || ""}
+                      onChange={(e) =>
+                        handleUpdateClassification(selectedTrip.id, "requestedByDept", e.target.value)
+                      }
+                      className="w-full bg-white border border-indigo-300 rounded-lg py-1.5 px-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">-- General Logistics --</option>
+                      {masterOptions.requestedByDepts.map((d) => (
+                        <option key={d.code} value={d.name}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Remarks Textarea */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Trip Remarks / Operational Comment
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={drawerRemarksText}
+                    onChange={(e) => setDrawerRemarksText(e.target.value)}
+                    placeholder="Enter operational notes, loading exceptions, or driver feedback..."
+                    className="w-full bg-white border border-indigo-300 rounded-lg p-2 text-xs text-slate-800 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                  />
+                  <div className="flex justify-end mt-1.5">
+                    <button
+                      type="button"
+                      onClick={handleSaveDrawerRemarks}
+                      disabled={savingDrawerRemarks}
+                      className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <Save className="w-3 h-3" />
+                      <span>{savingDrawerRemarks ? "Saving..." : "Save Remarks"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: COMBINED REQUISITIONS & CARGO */}
+              <div className="bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                    <Package className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Combined Orders &amp; Cargo Manifest</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    {(selectedTrip.tripRequests || []).length} Orders
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {(selectedTrip.tripRequests || []).map((tr: any, rIdx: number) => {
+                    const req = tr.request;
+                    if (!req) return null;
+                    return (
+                      <div
+                        key={req.id || rIdx}
+                        className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <Link
+                            href={`/requests/${req.id}`}
+                            className="font-bold text-indigo-700 hover:underline font-mono text-xs flex items-center gap-1"
+                          >
+                            <span>{req.requestCode}</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </Link>
+                          <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded">
+                            {req.plant?.code || "Plant"}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-800 font-medium">
+                          {req.itemDescription || "Cargo Goods"}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-[10px] text-slate-500 pt-1 border-t border-slate-200/60">
+                          <div>
+                            Boxes: <strong className="text-slate-800">{req.boxCount || 0}</strong>
+                          </div>
+                          <div>
+                            Weight: <strong className="text-slate-800">{req.requiredKg || 0} kg</strong>
+                          </div>
+                          <div>
+                            Volume: <strong className="text-slate-800">{req.requiredCbm || 0} cbm</strong>
+                          </div>
+                          <div>
+                            Requester: <strong className="text-slate-800">{req.requester?.name || "-"}</strong>
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-slate-600 flex items-center gap-1 pt-0.5">
+                          <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                          <span>{req.fromLocation?.locationName || "Origin"}</span>
+                          <span className="text-slate-400">⟶</span>
+                          <span>{req.toLocation?.locationName || "Destination"}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECTION 3: FLEET & DRIVER ASSIGNMENT */}
+              <div className="bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-2xs">
+                <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs border-b border-slate-100 pb-2">
+                  <Truck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Fleet Vehicle &amp; Driver Details</span>
+                </span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Vehicle Plate</span>
+                    <span className="font-bold text-slate-900 text-sm">
+                      {selectedTrip.vehicle?.vehicleNumber || "Unassigned"}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      {selectedTrip.vehicle?.vehicleCategory || selectedTrip.vehicle?.vehicleType || "-"} (
+                      {selectedTrip.paymentBasis || "KM_BASED"})
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Driver</span>
+                    <span className="font-bold text-slate-900 text-sm">
+                      {selectedTrip.driver?.name || "Unassigned"}
+                    </span>
+                    {selectedTrip.driver?.mobile && (
+                      <span className="text-[10px] text-slate-600 flex items-center gap-1 font-mono">
+                        <Phone className="w-2.5 h-2.5" />
+                        {selectedTrip.driver.mobile}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: GATE PASS & ACTUAL RUN (ODOMETERS) */}
+              <div className="bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-2xs">
+                <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs border-b border-slate-100 pb-2">
+                  <Gauge className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Gate Passes, Odometers &amp; Variance</span>
+                </span>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-bold">Planned KM</span>
+                    <span className="font-bold text-slate-800 font-mono">
+                      {formatNumber(selectedTrip.plannedKm || 0, 1)} km
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-bold">Actual KM</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {selectedTrip.actualKm ? `${formatNumber(selectedTrip.actualKm, 1)} km` : "-"}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-bold">Variance KM</span>
+                    <span className={`font-mono font-bold ${Number(selectedTrip.varianceKm || 0) > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                      {selectedTrip.varianceKm ? `${formatNumber(selectedTrip.varianceKm, 1)} km` : "0 km"}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-bold">Gate Passes</span>
+                    <span className="font-mono font-bold text-indigo-900 truncate block">
+                      {(selectedTrip.gatePasses || []).map((g: any) => g.gatePassNo).join(", ") || "None"}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedTrip.varianceReason && (
+                  <div className="text-[11px] p-2 bg-amber-50 rounded-lg text-amber-900 border border-amber-200">
+                    <strong>Variance Reason:</strong> {selectedTrip.varianceReason}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 5: FINANCIAL COST BREAKDOWN */}
+              <div className="bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-2xs">
+                <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs border-b border-slate-100 pb-2">
+                  <DollarSign className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Costing &amp; Financial Manifest</span>
+                </span>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block">Fuel Cost</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      Rs. {formatNumber(selectedTrip.fuelCost || 0, 2)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block">Running Maintenance</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      Rs. {formatNumber(selectedTrip.runningCost || 0, 2)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block">Driver Profit</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      Rs. {formatNumber(selectedTrip.driverProfit || 0, 2)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block">Daily Fixed Share</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      Rs. {formatNumber(selectedTrip.fixedDailyCost || 0, 2)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block">Diesel Rate Applied</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      Rs. {formatNumber(selectedTrip.dieselRateApplied || 0, 2)}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <span className="text-[10px] text-emerald-800 font-bold block">Total Trip Cost</span>
+                    <span className="font-mono font-black text-emerald-900 text-sm">
+                      Rs. {formatNumber(selectedTrip.totalTripCost || 0, 2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 6: DATATEX RECONCILIATION */}
+              <div className="bg-white rounded-xl border border-slate-200 p-3.5 space-y-2 shadow-2xs">
+                <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs border-b border-slate-100 pb-2">
+                  <FileCheck2 className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Datatex ERP Settlement</span>
+                </span>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Reconciliation Match:</span>
+                  <span className="font-bold text-slate-800 font-mono">
+                    {selectedTrip.reconciliations?.[0]?.matchStatus || "PENDING"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Commercial Invoices:</span>
+                  <span className="font-mono text-slate-800">
+                    {selectedTrip.reconciliations?.[0]?.invoiceNumbers || "None"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Completed By User:</span>
+                  <span className="font-medium text-slate-800">
+                    {selectedTrip.completedByUser?.name || "-"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

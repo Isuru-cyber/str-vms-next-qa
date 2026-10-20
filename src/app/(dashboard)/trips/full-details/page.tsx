@@ -41,7 +41,7 @@ export default async function FullTripDetailsPage() {
     const [dbTrips, dbPlants, dbVehicles, dbMaster] = await Promise.all([
       prisma.deliveryTrip.findMany({
         where,
-        take: 1000,
+        take: 200,
         orderBy: { id: "desc" },
         include: {
           vehicle: {

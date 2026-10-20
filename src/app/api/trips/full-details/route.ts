@@ -102,10 +102,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Query DeliveryTrips with complete relations
+    const limit = Math.min(Number(searchParams.get("limit")) || 200, 500);
+
     const [trips, masterOptions] = await Promise.all([
       prisma.deliveryTrip.findMany({
         where,
-        take: 500,
+        take: limit,
         orderBy: { id: "desc" },
         include: {
           vehicle: {
