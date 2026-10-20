@@ -895,79 +895,149 @@ export function FullTripDetailsClient({
 
       {/* TAB CONTENT 1: FULL DATA GRID (Fills Remaining Screen Height) */}
       {activeTab === "REGISTRY" && (
-        <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           {/* Scrollable Table Area: Clear grid lines, NO line merge, NO line wrap */}
           <div className="flex-1 overflow-auto">
-            <table className="w-full border-collapse border border-slate-300 text-left text-xs min-w-[3400px]">
-              <thead className="sticky top-0 bg-slate-900 text-white z-20 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-800">
-                <tr className="divide-x divide-slate-800">
-                  <th className="py-2.5 px-3 w-12 text-center border-r border-slate-800">#</th>
-                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Trip No</th>
-                  <th className="py-2.5 px-3.5 min-w-[120px] border-r border-slate-800">Status</th>
-                  <th className="py-2.5 px-3.5 min-w-[110px] border-r border-slate-800">Allocation Date</th>
+            <table className="w-full border-separate border-spacing-0 text-left text-xs min-w-[3400px]">
+              <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 shadow-xs">
+                <tr>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3 w-12 text-center">
+                    #
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                    Trip No
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[120px]">
+                    Status
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[110px]">
+                    Allocation Date
+                  </th>
                   
                   {/* EDITABLE CLASSIFICATION COLUMNS (4 Allowed) */}
-                  <th className="py-2.5 px-3.5 min-w-[200px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[200px]">
                     Delivery Window ✏️
                   </th>
-                  <th className="py-2.5 px-3.5 min-w-[150px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
                     Planning Type ✏️
                   </th>
-                  <th className="py-2.5 px-3.5 min-w-[180px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[180px]">
                     Requested By ✏️
                   </th>
                   
                   {/* OPERATIONAL / REQUEST DETAILS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3.5 min-w-[200px] border-r border-slate-800">Combined Requests</th>
-                  <th className="py-2.5 px-3.5 min-w-[90px] border-r border-slate-800">Plant</th>
-                  <th className="py-2.5 px-3.5 min-w-[220px] border-r border-slate-800">Corridor Route</th>
-                  <th className="py-2.5 px-3.5 min-w-[200px] border-r border-slate-800">Pickup Origin</th>
-                  <th className="py-2.5 px-3.5 min-w-[220px] border-r border-slate-800">Delivery Destinations</th>
-                  <th className="py-2.5 px-3.5 min-w-[200px] border-r border-slate-800">Cargo Description</th>
-                  <th className="py-2.5 px-3.5 min-w-[95px] text-center border-r border-slate-800">Boxes</th>
-                  <th className="py-2.5 px-3.5 min-w-[110px] text-right border-r border-slate-800">Net Weight</th>
-                  <th className="py-2.5 px-3.5 min-w-[100px] text-right border-r border-slate-800">Volume</th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[260px]">
+                    Combined Requests
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[90px]">
+                    Plant
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[220px]">
+                    Corridor Route
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[200px]">
+                    Pickup Origin
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[220px]">
+                    Delivery Destinations
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[200px]">
+                    Cargo Description
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[95px] text-center">
+                    Boxes
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right">
+                    Net Weight
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[100px] text-right">
+                    Volume
+                  </th>
                   
                   {/* FLEET & DRIVER DETAILS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3.5 min-w-[140px] border-r border-slate-800">Vehicle Plate</th>
-                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Category</th>
-                  <th className="py-2.5 px-3.5 min-w-[140px] border-r border-slate-800">Ownership / Basis</th>
-                  <th className="py-2.5 px-3.5 min-w-[150px] border-r border-slate-800">Driver</th>
-                  <th className="py-2.5 px-3.5 min-w-[120px] border-r border-slate-800">Driver Mobile</th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[140px]">
+                    Vehicle Plate
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                    Category
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[140px]">
+                    Ownership / Basis
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
+                    Driver
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[120px]">
+                    Driver Mobile
+                  </th>
                   
                   {/* GATE PASS & ACTUALS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3.5 min-w-[150px] border-r border-slate-800">Gate Passes</th>
-                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Departure Time</th>
-                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Completion Time</th>
-                  <th className="py-2.5 px-3.5 min-w-[105px] text-right border-r border-slate-800">Planned KM</th>
-                  <th className="py-2.5 px-3.5 min-w-[105px] text-right border-r border-slate-800">Actual KM</th>
-                  <th className="py-2.5 px-3.5 min-w-[105px] text-right border-r border-slate-800">Variance KM</th>
-                  <th className="py-2.5 px-3.5 min-w-[150px] border-r border-slate-800">Variance Reason</th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
+                    Gate Passes
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                    Departure Time
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                    Completion Time
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[105px] text-right">
+                    Planned KM
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[105px] text-right">
+                    Actual KM
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[105px] text-right">
+                    Variance KM
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
+                    Variance Reason
+                  </th>
                   
                   {/* FINANCIAL / COST DETAILS (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3.5 min-w-[110px] text-right border-r border-slate-800">Diesel Rate</th>
-                  <th className="py-2.5 px-3.5 min-w-[115px] text-right border-r border-slate-800">Fuel Cost</th>
-                  <th className="py-2.5 px-3.5 min-w-[115px] text-right border-r border-slate-800">Running Cost</th>
-                  <th className="py-2.5 px-3.5 min-w-[115px] text-right border-r border-slate-800">Driver Profit</th>
-                  <th className="py-2.5 px-3.5 min-w-[120px] text-right border-r border-slate-800">Fixed Daily Share</th>
-                  <th className="py-2.5 px-3.5 min-w-[130px] text-right bg-slate-950 font-bold border-r border-slate-800">Total Trip Cost</th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right">
+                    Diesel Rate
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right">
+                    Fuel Cost
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right">
+                    Running Cost
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right">
+                    Driver Profit
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[120px] text-right">
+                    Fixed Daily Share
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-900 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px] text-right">
+                    Total Trip Cost
+                  </th>
                   
                   {/* DATATEX RECONCILIATION & CLOSURE (STRICT READ-ONLY) */}
-                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Datatex Status</th>
-                  <th className="py-2.5 px-3.5 min-w-[170px] border-r border-slate-800">Commercial Invoices</th>
-                  <th className="py-2.5 px-3.5 min-w-[130px] border-r border-slate-800">Completed By</th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                    Datatex Status
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[170px]">
+                    Commercial Invoices
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                    Completed By
+                  </th>
                   
                   {/* EDITABLE REMARKS COLUMN */}
-                  <th className="py-2.5 px-3.5 min-w-[220px] bg-indigo-950 text-indigo-200 border-r border-indigo-900">
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[220px]">
                     Remarks / Notes ✏️
                   </th>
-                  <th className="py-2.5 px-2.5 w-16 text-center">Action</th>
+                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 bg-clip-padding py-2.5 px-2.5 w-16 text-center">
+                    Action
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody>
                 {paginatedTrips.length === 0 ? (
                   <tr>
-                    <td colSpan={37} className="py-16 text-center text-slate-400">
+                    <td colSpan={37} className="py-16 text-center text-slate-400 border-b border-slate-200 bg-white">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <AlertCircle className="w-8 h-8 text-slate-300" />
                         <span className="font-semibold text-xs text-slate-600">
@@ -976,7 +1046,7 @@ export function FullTripDetailsClient({
                         <button
                           type="button"
                           onClick={handleResetFilters}
-                          className="text-xs font-bold text-indigo-600 hover:underline"
+                          className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                         >
                           Clear all filters
                         </button>
@@ -1008,31 +1078,31 @@ export function FullTripDetailsClient({
                         key={t.id}
                         onClick={() => setSelectedTrip(t)}
                         title="Click row to open 360° side details drawer"
-                        className={`transition-colors divide-x divide-slate-200 cursor-pointer ${
+                        className={`transition-colors cursor-pointer ${
                           isSelected
-                            ? "bg-indigo-100/90 font-medium"
-                            : "hover:bg-indigo-50/70"
+                            ? "bg-blue-50/80 font-medium"
+                            : "bg-white hover:bg-slate-50"
                         }`}
                       >
                         {/* Index */}
-                        <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {rowGlobalIndex}
                         </td>
 
                         {/* Trip No */}
-                        <td className="py-2 px-3.5 font-bold text-slate-900 font-mono whitespace-nowrap border-r border-slate-200">
-                          <span className="text-indigo-600 hover:underline flex items-center gap-1">
+                        <td className="py-2 px-3.5 font-bold text-slate-900 font-mono whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
+                          <span className="text-blue-600 hover:underline flex items-center gap-1">
                             <span>{t.tripNo}</span>
                           </span>
                         </td>
 
                         {/* Status */}
-                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           <StatusBadge status={t.status} />
                         </td>
 
                         {/* Allocation Date */}
-                        <td className="py-2 px-3.5 text-slate-600 whitespace-nowrap text-[11px] border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-slate-600 whitespace-nowrap text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.createdAt
                             ? new Date(t.createdAt).toLocaleDateString("en-US", {
                                 month: "short",
@@ -1044,7 +1114,7 @@ export function FullTripDetailsClient({
 
                         {/* 1. EDITABLE: Delivery Window */}
                         <td
-                          className="py-1 px-2.5 bg-indigo-50/40 border-r border-slate-200 whitespace-nowrap"
+                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <select
@@ -1053,7 +1123,7 @@ export function FullTripDetailsClient({
                               handleUpdateClassification(t.id, "deliveryWindow", e.target.value)
                             }
                             disabled={savingId === t.id}
-                            className="w-full text-[11px] font-semibold bg-white border border-indigo-200 rounded py-1 px-1.5 focus:ring-1 focus:ring-indigo-500 outline-none text-slate-800"
+                            className="w-full text-[11px] font-semibold bg-white border border-slate-300 hover:border-slate-400 rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none text-slate-800 transition"
                           >
                             <option value="">-- Select Window --</option>
                             {masterOptions.deliveryWindows.map((dw) => (
@@ -1066,7 +1136,7 @@ export function FullTripDetailsClient({
 
                         {/* 2. EDITABLE: Planning Type */}
                         <td
-                          className="py-1 px-2.5 bg-indigo-50/40 border-r border-slate-200 whitespace-nowrap"
+                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <select
@@ -1075,10 +1145,10 @@ export function FullTripDetailsClient({
                               handleUpdateClassification(t.id, "planningType", e.target.value)
                             }
                             disabled={savingId === t.id}
-                            className={`w-full text-[11px] font-bold border rounded py-1 px-1.5 focus:ring-1 focus:ring-indigo-500 outline-none ${
+                            className={`w-full text-[11px] font-bold border rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none transition ${
                               (t.planningType || "").toLowerCase() === "special"
                                 ? "bg-amber-50 text-amber-900 border-amber-300"
-                                : "bg-white text-slate-800 border-indigo-200"
+                                : "bg-white text-slate-800 border-slate-300 hover:border-slate-400"
                             }`}
                           >
                             {masterOptions.planningTypes.map((pt) => (
@@ -1091,7 +1161,7 @@ export function FullTripDetailsClient({
 
                         {/* 3. EDITABLE: Requested By Dept */}
                         <td
-                          className="py-1 px-2.5 bg-indigo-50/40 border-r border-slate-200 whitespace-nowrap"
+                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <select
@@ -1100,7 +1170,7 @@ export function FullTripDetailsClient({
                               handleUpdateClassification(t.id, "requestedByDept", e.target.value)
                             }
                             disabled={savingId === t.id}
-                            className="w-full text-[11px] font-medium bg-white border border-indigo-200 rounded py-1 px-1.5 focus:ring-1 focus:ring-indigo-500 outline-none text-slate-800"
+                            className="w-full text-[11px] font-medium bg-white border border-slate-300 hover:border-slate-400 rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none text-slate-800 transition"
                           >
                             <option value="">-- General Logistics --</option>
                             {masterOptions.requestedByDepts.map((d) => (
@@ -1111,67 +1181,67 @@ export function FullTripDetailsClient({
                           </select>
                         </td>
 
-                        {/* Request Codes */}
-                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200 font-mono text-[11px] text-slate-700">
+                        {/* Request Codes (Strictly Single-line, No multiple lines) */}
+                        <td className="py-2 px-3.5 whitespace-nowrap border-b border-r border-slate-200 bg-inherit font-mono text-[11px] text-slate-700">
                           {reqList.length > 0 ? (
-                            reqList.map((r: any) => r.requestCode).join(", ")
+                            <span>{reqList.map((r: any) => r.requestCode).join(", ")}</span>
                           ) : (
                             <span className="text-slate-400 italic">None</span>
                           )}
                         </td>
 
                         {/* Plant */}
-                        <td className="py-2 px-3.5 whitespace-nowrap font-bold text-slate-800 border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap font-bold text-slate-800 border-b border-r border-slate-200 bg-inherit">
                           {plants || "-"}
                         </td>
 
                         {/* Route Corridor */}
-                        <td className="py-2 px-3.5 whitespace-nowrap font-medium text-slate-800 border-r border-slate-200" title={t.route?.routeName || ""}>
+                        <td className="py-2 px-3.5 whitespace-nowrap font-medium text-slate-800 border-b border-r border-slate-200 bg-inherit" title={t.route?.routeName || ""}>
                           {t.route?.routeName || "Combined Corridor"}
                         </td>
 
                         {/* Pickup Origin */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-r border-slate-200" title={origins}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-b border-r border-slate-200 bg-inherit" title={origins}>
                           {origins || "-"}
                         </td>
 
                         {/* Delivery Destinations */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-r border-slate-200" title={destinations}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-b border-r border-slate-200 bg-inherit" title={destinations}>
                           {destinations || "-"}
                         </td>
 
                         {/* Cargo Description */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-r border-slate-200" title={cargoDescriptions}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 border-b border-r border-slate-200 bg-inherit" title={cargoDescriptions}>
                           {cargoDescriptions || "-"}
                         </td>
 
                         {/* Boxes */}
-                        <td className="py-2 px-3.5 text-center whitespace-nowrap font-bold text-slate-900 border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-center whitespace-nowrap font-bold text-slate-900 border-b border-r border-slate-200 bg-inherit">
                           {totalBoxes || "-"}
                         </td>
 
                         {/* Net Weight */}
-                        <td className="py-2 px-3.5 text-right whitespace-nowrap font-medium text-slate-800 border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right whitespace-nowrap font-medium text-slate-800 border-b border-r border-slate-200 bg-inherit">
                           {totalKg ? `${formatNumber(totalKg, 0)} kg` : "-"}
                         </td>
 
                         {/* Volume */}
-                        <td className="py-2 px-3.5 text-right whitespace-nowrap text-slate-600 border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right whitespace-nowrap text-slate-600 border-b border-r border-slate-200 bg-inherit">
                           {totalCbm ? `${formatNumber(totalCbm, 2)} cbm` : "-"}
                         </td>
 
                         {/* Vehicle Plate */}
-                        <td className="py-2 px-3.5 whitespace-nowrap font-bold text-slate-900 border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap font-bold text-slate-900 border-b border-r border-slate-200 bg-inherit">
                           {t.vehicle?.vehicleNumber || "Unassigned"}
                         </td>
 
                         {/* Vehicle Category */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-[11px] text-slate-600 border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-[11px] text-slate-600 border-b border-r border-slate-200 bg-inherit">
                           {t.vehicle?.vehicleCategory || t.vehicle?.vehicleType || "-"}
                         </td>
 
                         {/* Ownership / Basis */}
-                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {isAdhoc ? (
                             <span className="text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded text-[10px] border border-amber-200">
                               Outside Ad-Hoc
@@ -1184,19 +1254,19 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Driver */}
-                        <td className="py-2 px-3.5 whitespace-nowrap font-medium text-slate-900 border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap font-medium text-slate-900 border-b border-r border-slate-200 bg-inherit">
                           {t.driver?.name || "Unassigned"}
                         </td>
 
                         {/* Driver Mobile */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-500 font-mono text-[11px] border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-500 font-mono text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.driver?.mobile || "-"}
                         </td>
 
                         {/* Gate Passes */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-[11px] border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.gatePasses && t.gatePasses.length > 0 ? (
-                            <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-900 font-mono font-bold">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold">
                               {t.gatePasses.map((g: any) => g.gatePassNo).join(", ")}
                             </span>
                           ) : (
@@ -1205,31 +1275,31 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Departure Time */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.actualStart
                             ? new Date(t.actualStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             : "-"}
                         </td>
 
                         {/* Completion Time */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.actualEnd
                             ? new Date(t.actualEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             : "-"}
                         </td>
 
                         {/* Planned KM */}
-                        <td className="py-2 px-3.5 text-right font-mono font-medium text-slate-700 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono font-medium text-slate-700 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {formatNumber(t.plannedKm || 0, 1)} km
                         </td>
 
                         {/* Actual KM */}
-                        <td className="py-2 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.actualKm ? `${formatNumber(t.actualKm, 1)} km` : "-"}
                         </td>
 
                         {/* Variance KM */}
-                        <td className="py-2 px-3.5 text-right font-mono whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.varianceKm !== null && t.varianceKm !== undefined ? (
                             <span className={Number(t.varianceKm) > 0 ? "text-rose-600 font-bold" : "text-emerald-600 font-bold"}>
                               {Number(t.varianceKm) > 0 ? `+${formatNumber(t.varianceKm, 1)}` : formatNumber(t.varianceKm, 1)} km
@@ -1238,42 +1308,42 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Variance Reason */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-500 text-[11px] border-r border-slate-200" title={t.varianceReason || ""}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-500 text-[11px] border-b border-r border-slate-200 bg-inherit" title={t.varianceReason || ""}>
                           {t.varianceReason || "-"}
                         </td>
 
                         {/* Diesel Rate */}
-                        <td className="py-2 px-3.5 text-right font-mono text-slate-600 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-600 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.dieselRateApplied ? `Rs. ${formatNumber(t.dieselRateApplied, 2)}` : "-"}
                         </td>
 
                         {/* Fuel Cost */}
-                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.fuelCost ? `Rs. ${formatNumber(t.fuelCost, 2)}` : "-"}
                         </td>
 
                         {/* Running Cost */}
-                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.runningCost ? `Rs. ${formatNumber(t.runningCost, 2)}` : "-"}
                         </td>
 
                         {/* Driver Profit */}
-                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.driverProfit ? `Rs. ${formatNumber(t.driverProfit, 2)}` : "-"}
                         </td>
 
-                        {/* Daily Fixed Share */}
-                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
+                        {/* Fixed Daily Share */}
+                        <td className="py-2 px-3.5 text-right font-mono text-slate-700 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.fixedDailyCost ? `Rs. ${formatNumber(t.fixedDailyCost, 2)}` : "-"}
                         </td>
 
                         {/* Total Trip Cost */}
-                        <td className="py-2 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap bg-slate-50 border-r border-slate-200">
+                        <td className="py-2 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {t.totalTripCost ? `Rs. ${formatNumber(t.totalTripCost, 2)}` : "-"}
                         </td>
 
                         {/* Datatex Reconciled Status */}
-                        <td className="py-2 px-3.5 whitespace-nowrap border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           {lastRec ? (
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                               lastRec.matchStatus === "MATCHED"
@@ -1288,17 +1358,17 @@ export function FullTripDetailsClient({
                         </td>
 
                         {/* Commercial Invoices */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 font-mono text-[11px] border-r border-slate-200" title={lastRec?.invoiceNumbers || ""}>
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 font-mono text-[11px] border-b border-r border-slate-200 bg-inherit" title={lastRec?.invoiceNumbers || ""}>
                           {lastRec?.invoiceNumbers || "-"}
                         </td>
 
                         {/* Completed By User */}
-                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-r border-slate-200">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.completedByUser?.name || "-"}
                         </td>
 
                         {/* 4. EDITABLE: Remarks / Notes */}
-                        <td className="py-1 px-3 whitespace-nowrap bg-indigo-50/20 border-r border-slate-200">
+                        <td className="py-1 px-3 whitespace-nowrap border-b border-r border-slate-200 bg-inherit">
                           <span className="text-slate-700 text-[11px]">
                             {t.adminRemarks || <span className="text-slate-400 italic">No notes</span>}
                           </span>
@@ -1306,12 +1376,12 @@ export function FullTripDetailsClient({
 
                         {/* Action Link to Manifest */}
                         <td
-                          className="py-2 px-2.5 text-center whitespace-nowrap"
+                          className="py-2 px-2.5 text-center whitespace-nowrap border-b border-slate-200 bg-inherit"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Link
                             href={`/trips/${t.id}`}
-                            className="p-1 rounded bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 inline-flex items-center justify-center transition"
+                            className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 inline-flex items-center justify-center transition"
                             title="Open Trip Manifest Slip"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -1326,19 +1396,19 @@ export function FullTripDetailsClient({
           </div>
 
           {/* PINNED PAGINATION CONTROLS BAR: Exactly 200 items per page */}
-          <div className="bg-slate-900 text-white px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs border-t border-slate-800">
+          <div className="bg-slate-50 text-slate-700 px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs border-t border-slate-200">
             {/* Record Summary */}
-            <div className="text-slate-300 text-[11px]">
+            <div className="text-slate-600 text-[11px]">
               Showing{" "}
-              <span className="font-bold text-white">
+              <span className="font-bold text-slate-900">
                 {filteredTrips.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}
               </span>{" "}
               to{" "}
-              <span className="font-bold text-white">
+              <span className="font-bold text-slate-900">
                 {Math.min(currentPage * PAGE_SIZE, filteredTrips.length)}
               </span>{" "}
               of{" "}
-              <span className="font-bold text-white">{filteredTrips.length}</span> trips
+              <span className="font-bold text-slate-900">{filteredTrips.length}</span> trips
               <span className="text-slate-400 ml-2">({PAGE_SIZE} per page)</span>
             </div>
 
@@ -1349,7 +1419,7 @@ export function FullTripDetailsClient({
                 type="button"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition"
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 transition cursor-pointer"
                 title="First Page"
               >
                 <ChevronsLeft className="w-3.5 h-3.5" />
@@ -1360,16 +1430,16 @@ export function FullTripDetailsClient({
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition"
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 transition cursor-pointer"
                 title="Previous Page"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
 
               {/* Page Indicator */}
-              <span className="px-2 text-[11px] font-semibold text-slate-200">
-                Page <span className="text-white font-bold">{currentPage}</span> of{" "}
-                <span className="text-white font-bold">{totalPages}</span>
+              <span className="px-2 text-[11px] font-semibold text-slate-600">
+                Page <span className="text-slate-900 font-bold">{currentPage}</span> of{" "}
+                <span className="text-slate-900 font-bold">{totalPages}</span>
               </span>
 
               {/* Next Page */}
@@ -1377,7 +1447,7 @@ export function FullTripDetailsClient({
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition"
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 transition cursor-pointer"
                 title="Next Page"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -1388,7 +1458,7 @@ export function FullTripDetailsClient({
                 type="button"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition"
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 transition cursor-pointer"
                 title="Last Page"
               >
                 <ChevronsRight className="w-3.5 h-3.5" />

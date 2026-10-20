@@ -51,7 +51,14 @@ export async function POST(request: NextRequest) {
     const item = await prisma.masterData.create({
       data: {
         categoryId: cat.id,
-        code,
+        code: (code && code.trim())
+          ? code.trim().toUpperCase()
+          : (name || "")
+              .trim()
+              .toUpperCase()
+              .replace(/[^A-Z0-9]+/g, "_")
+              .replace(/^_+|_+$/g, "")
+              .slice(0, 30),
         name,
         defaultFuelConsumption:
           defaultFuelConsumption !== undefined && defaultFuelConsumption !== null && defaultFuelConsumption !== ""
@@ -102,7 +109,14 @@ export async function PUT(request: NextRequest) {
       where: { id: parseInt(id, 10) },
       data: {
         name,
-        code,
+        code: (code && code.trim())
+          ? code.trim().toUpperCase()
+          : (name || "")
+              .trim()
+              .toUpperCase()
+              .replace(/[^A-Z0-9]+/g, "_")
+              .replace(/^_+|_+$/g, "")
+              .slice(0, 30),
         defaultFuelConsumption:
           defaultFuelConsumption !== undefined
             ? defaultFuelConsumption !== null && defaultFuelConsumption !== ""
@@ -145,7 +159,75 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const force = searchParams.get("force") === "true";
     if (!id) return NextResponse.json({ message: "ID required" }, { status: 400 });
+
+    const itemId = parseInt(id, 10);
+    const masterItem = await prisma.masterData.findUnique({
+      where: { id: itemId },
+      include: { category: true },
+    });
+
+    if (!masterItem) {
+      return NextResponse.json({ message: "Item not found" }, { status: 404 });
+    }
+
+    if (!force) {
+      let assignedCount = 0;
+      let targetEntity = "";
+
+      if (masterItem.category.code === "DELIVERY_WINDOW") {
+        assignedCount = await prisma.deliveryTrip.count({
+          where: { deliveryWindow: masterItem.name },
+        });
+        targetEntity = "delivery trip(s)";
+      } else if (masterItem.category.code === "PLANNING_TYPE") {
+        assignedCount = await prisma.deliveryTrip.count({
+          where: { planningType: masterItem.name },
+        });
+        targetEntity = "delivery trip(s)";
+      } else if (masterItem.category.code === "REQUESTED_BY") {
+        assignedCount = await prisma.deliveryTrip.count({
+          where: { requestedByDept: masterItem.name },
+        });
+        targetEntity = "delivery trip(s)";
+      } else if (masterItem.category.code === "SUB_OPERATION") {
+        assignedCount = await prisma.vehicleRequest.count({
+          where: { subOperationId: itemId },
+        });
+        targetEntity = "transport request(s)";
+      } else if (masterItem.category.code === "VEHICLE_TYPE") {
+        assignedCount = await prisma.vehicle.count({
+          where: {
+            OR: [
+              { vehicleType: masterItem.code },
+              { vehicleType: masterItem.name },
+            ],
+          },
+        });
+        targetEntity = "fleet vehicle(s)";
+      } else if (masterItem.category.code === "VEHICLE_CATEGORY") {
+        assignedCount = await prisma.vehicle.count({
+          where: {
+            OR: [
+              { vehicleCategory: masterItem.code },
+              { vehicleCategory: masterItem.name },
+            ],
+          },
+        });
+        targetEntity = "fleet vehicle(s)";
+      }
+
+      if (assignedCount > 0) {
+        return NextResponse.json({
+          status: "warning",
+          requiresConfirmation: true,
+          assignedCount,
+          targetEntity,
+          message: `Warning: "${masterItem.name}" is currently assigned to ${assignedCount} ${targetEntity}. Deleting it will affect existing records. Are you sure you want to proceed?`,
+        });
+      }
+    }
 
     await prisma.masterData.update({
       where: { id: parseInt(id, 10) },

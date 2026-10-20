@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
   CheckCircle2,
+  AlertCircle,
   Loader2,
   Database,
   Building2,
@@ -64,6 +65,26 @@ export function MasterDataHub({
 
   const [formCode, setFormCode] = useState("");
   const [formName, setFormName] = useState("");
+  const [isCodeManuallyChanged, setIsCodeManuallyChanged] = useState(false);
+  const [warningModalData, setWarningModalData] = useState<{
+    id: number;
+    message: string;
+    assignedCount: number;
+    targetEntity: string;
+  } | null>(null);
+
+  const handleNameChange = (val: string) => {
+    setFormName(val);
+    if (!editingItem && !isCodeManuallyChanged) {
+      const autoCode = val
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 30);
+      setFormCode(autoCode);
+    }
+  };
   const [formDesc, setFormDesc] = useState("");
   const [formFuelConsumption, setFormFuelConsumption] = useState("");
   const [formRunningCost, setFormRunningCost] = useState("");
@@ -78,6 +99,7 @@ export function MasterDataHub({
     setEditingItem(null);
     setFormCode("");
     setFormName("");
+    setIsCodeManuallyChanged(false);
     setFormDesc("");
     setFormFuelConsumption("");
     setFormRunningCost("");
@@ -91,6 +113,7 @@ export function MasterDataHub({
 
   const openEdit = (item: any) => {
     setEditingItem(item);
+    setIsCodeManuallyChanged(true);
     setFormCode(item.code);
     setFormName(item.name);
     setFormDesc(item.description || "");
@@ -231,7 +254,7 @@ export function MasterDataHub({
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, force = false) => {
     if (activeTab === "PLANT") {
       if (!confirm("Are you sure you want to deactivate this plant? Historical records will remain intact.")) return;
       try {
@@ -245,12 +268,24 @@ export function MasterDataHub({
       return;
     }
 
-    if (!confirm("Are you sure you want to delete this option?")) return;
+    if (!force && !confirm("Are you sure you want to delete this option?")) return;
 
     try {
-      const res = await fetch(`/api/master-data?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error deleting");
+      const res = await fetch(`/api/master-data?id=${id}${force ? "&force=true" : ""}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error deleting");
 
+      if (data.status === "warning" && data.requiresConfirmation) {
+        setWarningModalData({
+          id,
+          message: data.message,
+          assignedCount: data.assignedCount,
+          targetEntity: data.targetEntity,
+        });
+        return;
+      }
+
+      setWarningModalData(null);
       if (activeTab === "VEHICLE_TYPE") {
         setVTypes((prev) => prev.filter((i) => i.id !== id));
       } else if (activeTab === "VEHICLE_CATEGORY") {
@@ -265,8 +300,8 @@ export function MasterDataHub({
         setSubOps((prev) => prev.filter((i) => i.id !== id));
       }
       router.refresh();
-    } catch (err) {
-      alert("Error deleting");
+    } catch (err: any) {
+      alert(err.message || "Error deleting");
     }
   };
 
@@ -595,13 +630,47 @@ export function MasterDataHub({
               <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                    System Code <span className="text-rose-500">*</span>
+                    Name / Label <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
+                    value={formName}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder={
+                      activeTab === "PLANT"
+                        ? "e.g. STR4"
+                        : activeTab === "VEHICLE_TYPE"
+                        ? "e.g. 10 ft Lorry"
+                        : activeTab === "VEHICLE_CATEGORY"
+                        ? "e.g. Threewheel"
+                        : activeTab === "DELIVERY_WINDOW"
+                        ? "e.g. Morning - Sameday Unloading"
+                        : activeTab === "PLANNING_TYPE"
+                        ? "e.g. Special Urgent"
+                        : "e.g. Raw Material"
+                    }
+                    className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold bg-white transition-all"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      System Code <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-blue-700 bg-blue-50 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+                      ⚡ Auto-generated
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    required
                     value={formCode}
-                    onChange={(e) => setFormCode(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setIsCodeManuallyChanged(true);
+                      setFormCode(e.target.value.toUpperCase());
+                    }}
                     placeholder={
                       activeTab === "PLANT"
                         ? "e.g. STR4"
@@ -609,31 +678,9 @@ export function MasterDataHub({
                         ? "e.g. 10_FT_LORRY"
                         : activeTab === "VEHICLE_CATEGORY"
                         ? "e.g. THREEWHEEL"
-                        : "e.g. SAMPLE"
+                        : "e.g. CODE_NAME"
                     }
                     className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold uppercase bg-slate-50 focus:bg-white transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                    Name / Label <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder={
-                      activeTab === "PLANT"
-                        ? "e.g. STR4"
-                        : activeTab === "VEHICLE_TYPE"
-                        ? "e.g. 10 ft"
-                        : activeTab === "VEHICLE_CATEGORY"
-                        ? "e.g. Threewheel"
-                        : "e.g. Raw Material"
-                    }
-                    className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold bg-white transition-all"
                   />
                 </div>
 
@@ -775,6 +822,44 @@ export function MasterDataHub({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Warning Confirmation Modal for Items Currently In Use */}
+      {warningModalData && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-amber-300 overflow-hidden">
+            <div className="p-4 bg-amber-50 border-b border-amber-200 flex items-center gap-2.5 text-amber-900">
+              <div className="p-2 bg-amber-200 rounded-xl">
+                <AlertCircle className="w-5 h-5 text-amber-800" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm">Warning: Item Currently in Use</h3>
+                <p className="text-[11px] text-amber-700">Active records are assigned to this option</p>
+              </div>
+            </div>
+            <div className="p-5 text-xs text-slate-700 space-y-2">
+              <p className="font-medium text-slate-800">{warningModalData.message}</p>
+              <p className="text-slate-500 text-[11px]">
+                Deactivating this master record will not delete historical records, but will remove it from future allocation options and may affect filtering.
+              </p>
+            </div>
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setWarningModalData(null)}
+                className="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(warningModalData.id, true)}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition shadow-xs cursor-pointer"
+              >
+                Proceed &amp; Deactivate Anyway
+              </button>
+            </div>
           </div>
         </div>
       )}
