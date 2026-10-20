@@ -460,15 +460,10 @@ export function FullTripDetailsClient({
         "Trip No": t.tripNo,
         "Status": t.status,
         "Allocation Date": t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "",
-        "Delivery Window / Shift": t.deliveryWindow || "Not Specified",
-        "Planning Type": t.planningType || "Planned",
-        "Requested By Department": t.requestedByDept || "Not Specified",
         "Origin Plant": plants || "",
         "Corridor Route": t.route?.routeName || "Consolidated Route",
         "Origin Location": origins || "",
         "Destination Locations": destinations || "",
-        "Request Codes": reqCodes || "",
-        "Requesters": requesters || "",
         "Cargo Description": cargoDescriptions || "",
         "Total Boxes": totalBoxes,
         "Total Weight (KG)": totalKg,
@@ -495,6 +490,11 @@ export function FullTripDetailsClient({
         "Datatex Reconciled Status": lastRec?.matchStatus || "PENDING",
         "Datatex Invoices": lastRec?.invoiceNumbers || "",
         "Completed By": t.completedByUser?.name || "",
+        "Delivery Window / Shift": t.deliveryWindow || "Not Specified",
+        "Planning Type": t.planningType || "Planned",
+        "Requested By Department": t.requestedByDept || "Not Specified",
+        "Combined Requests": reqCodes || "",
+        "Requesters": requesters || "",
         "Operational Remarks": t.adminRemarks || "",
       };
     });
@@ -899,137 +899,135 @@ export function FullTripDetailsClient({
           {/* Scrollable Table Area: Clear grid lines, NO line merge, NO line wrap */}
           <div className="flex-1 overflow-auto">
             <table className="w-full border-separate border-spacing-0 text-left text-xs min-w-[3400px]">
-              <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 shadow-xs">
+              <thead className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 shadow-xs">
                 <tr>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3 w-12 text-center">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3 w-12 text-center whitespace-nowrap">
                     #
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Trip No
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[120px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[120px] whitespace-nowrap">
                     Status
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[110px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[120px] whitespace-nowrap">
                     Allocation Date
                   </th>
                   
-                  {/* EDITABLE CLASSIFICATION COLUMNS (4 Allowed) */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[200px]">
-                    Delivery Window ✏️
-                  </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
-                    Planning Type ✏️
-                  </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[180px]">
-                    Requested By ✏️
-                  </th>
-                  
                   {/* OPERATIONAL / REQUEST DETAILS (STRICT READ-ONLY) */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[260px]">
-                    Combined Requests
-                  </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[90px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[90px] whitespace-nowrap">
                     Plant
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[220px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[220px] whitespace-nowrap">
                     Corridor Route
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[200px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[200px] whitespace-nowrap">
                     Pickup Origin
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[220px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[220px] whitespace-nowrap">
                     Delivery Destinations
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[200px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[200px] whitespace-nowrap">
                     Cargo Description
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[95px] text-center">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[95px] text-center whitespace-nowrap">
                     Boxes
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right whitespace-nowrap">
                     Net Weight
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[100px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[100px] text-right whitespace-nowrap">
                     Volume
                   </th>
                   
                   {/* FLEET & DRIVER DETAILS (STRICT READ-ONLY) */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[140px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[140px] whitespace-nowrap">
                     Vehicle Plate
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Category
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[140px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[150px] whitespace-nowrap">
                     Ownership / Basis
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[150px] whitespace-nowrap">
                     Driver
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[120px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Driver Mobile
                   </th>
                   
                   {/* GATE PASS & ACTUALS (STRICT READ-ONLY) */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[150px] whitespace-nowrap">
                     Gate Passes
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Departure Time
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Completion Time
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[105px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right whitespace-nowrap">
                     Planned KM
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[105px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right whitespace-nowrap">
                     Actual KM
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[105px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right whitespace-nowrap">
                     Variance KM
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[150px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[160px] whitespace-nowrap">
                     Variance Reason
                   </th>
                   
                   {/* FINANCIAL / COST DETAILS (STRICT READ-ONLY) */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[110px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right whitespace-nowrap">
                     Diesel Rate
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right whitespace-nowrap">
                     Fuel Cost
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right whitespace-nowrap">
                     Running Cost
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[115px] text-right whitespace-nowrap">
                     Driver Profit
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[120px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[125px] text-right whitespace-nowrap">
                     Fixed Daily Share
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-900 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px] text-right">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-900 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] text-right whitespace-nowrap">
                     Total Trip Cost
                   </th>
                   
                   {/* DATATEX RECONCILIATION & CLOSURE (STRICT READ-ONLY) */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Datatex Status
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[170px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[170px] whitespace-nowrap">
                     Commercial Invoices
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[130px]">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[130px] whitespace-nowrap">
                     Completed By
                   </th>
-                  
-                  {/* EDITABLE REMARKS COLUMN */}
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 border-r border-slate-200 bg-clip-padding py-2.5 px-3.5 min-w-[220px]">
+
+                  {/* EDITABLE CLASSIFICATION & FINAL COLUMNS MOVED TO END */}
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[200px] whitespace-nowrap">
+                    Delivery Window ✏️
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[150px] whitespace-nowrap">
+                    Planning Type ✏️
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[180px] whitespace-nowrap">
+                    Requested By ✏️
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[260px] whitespace-nowrap">
+                    Combined Requests
+                  </th>
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 border-r border-slate-300 bg-clip-padding py-2.5 px-3.5 min-w-[220px] whitespace-nowrap">
                     Remarks / Notes ✏️
                   </th>
-                  <th className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-300 bg-clip-padding py-2.5 px-2.5 w-16 text-center">
+                  <th className="sticky top-0 z-20 bg-slate-200 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-400 bg-clip-padding py-2.5 px-2.5 min-w-[70px] text-center whitespace-nowrap">
                     Action
                   </th>
                 </tr>
@@ -1110,84 +1108,6 @@ export function FullTripDetailsClient({
                                 year: "numeric",
                               })
                             : "-"}
-                        </td>
-
-                        {/* 1. EDITABLE: Delivery Window */}
-                        <td
-                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <select
-                            value={t.deliveryWindow || ""}
-                            onChange={(e) =>
-                              handleUpdateClassification(t.id, "deliveryWindow", e.target.value)
-                            }
-                            disabled={savingId === t.id}
-                            className="w-full text-[11px] font-semibold bg-white border border-slate-300 hover:border-slate-400 rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none text-slate-800 transition"
-                          >
-                            <option value="">-- Select Window --</option>
-                            {masterOptions.deliveryWindows.map((dw) => (
-                              <option key={dw.code} value={dw.name}>
-                                {dw.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* 2. EDITABLE: Planning Type */}
-                        <td
-                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <select
-                            value={t.planningType || "Planned"}
-                            onChange={(e) =>
-                              handleUpdateClassification(t.id, "planningType", e.target.value)
-                            }
-                            disabled={savingId === t.id}
-                            className={`w-full text-[11px] font-bold border rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none transition ${
-                              (t.planningType || "").toLowerCase() === "special"
-                                ? "bg-amber-50 text-amber-900 border-amber-300"
-                                : "bg-white text-slate-800 border-slate-300 hover:border-slate-400"
-                            }`}
-                          >
-                            {masterOptions.planningTypes.map((pt) => (
-                              <option key={pt.code} value={pt.name}>
-                                {pt.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* 3. EDITABLE: Requested By Dept */}
-                        <td
-                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <select
-                            value={t.requestedByDept || ""}
-                            onChange={(e) =>
-                              handleUpdateClassification(t.id, "requestedByDept", e.target.value)
-                            }
-                            disabled={savingId === t.id}
-                            className="w-full text-[11px] font-medium bg-white border border-slate-300 hover:border-slate-400 rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none text-slate-800 transition"
-                          >
-                            <option value="">-- General Logistics --</option>
-                            {masterOptions.requestedByDepts.map((d) => (
-                              <option key={d.code} value={d.name}>
-                                {d.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Request Codes (Strictly Single-line, No multiple lines) */}
-                        <td className="py-2 px-3.5 whitespace-nowrap border-b border-r border-slate-200 bg-inherit font-mono text-[11px] text-slate-700">
-                          {reqList.length > 0 ? (
-                            <span>{reqList.map((r: any) => r.requestCode).join(", ")}</span>
-                          ) : (
-                            <span className="text-slate-400 italic">None</span>
-                          )}
                         </td>
 
                         {/* Plant */}
@@ -1365,6 +1285,84 @@ export function FullTripDetailsClient({
                         {/* Completed By User */}
                         <td className="py-2 px-3.5 whitespace-nowrap text-slate-600 text-[11px] border-b border-r border-slate-200 bg-inherit">
                           {t.completedByUser?.name || "-"}
+                        </td>
+
+                        {/* 1. EDITABLE: Delivery Window */}
+                        <td
+                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <select
+                            value={t.deliveryWindow || ""}
+                            onChange={(e) =>
+                              handleUpdateClassification(t.id, "deliveryWindow", e.target.value)
+                            }
+                            disabled={savingId === t.id}
+                            className="w-full text-[11px] font-semibold bg-white border border-slate-300 hover:border-slate-400 rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none text-slate-800 transition"
+                          >
+                            <option value="">-- Select Window --</option>
+                            {masterOptions.deliveryWindows.map((dw) => (
+                              <option key={dw.code} value={dw.name}>
+                                {dw.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* 2. EDITABLE: Planning Type */}
+                        <td
+                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <select
+                            value={t.planningType || "Planned"}
+                            onChange={(e) =>
+                              handleUpdateClassification(t.id, "planningType", e.target.value)
+                            }
+                            disabled={savingId === t.id}
+                            className={`w-full text-[11px] font-bold border rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none transition ${
+                              (t.planningType || "").toLowerCase() === "special"
+                                ? "bg-amber-50 text-amber-900 border-amber-300"
+                                : "bg-white text-slate-800 border-slate-300 hover:border-slate-400"
+                            }`}
+                          >
+                            {masterOptions.planningTypes.map((pt) => (
+                              <option key={pt.code} value={pt.name}>
+                                {pt.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* 3. EDITABLE: Requested By Dept */}
+                        <td
+                          className="py-1 px-2.5 border-b border-r border-slate-200 bg-inherit whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <select
+                            value={t.requestedByDept || ""}
+                            onChange={(e) =>
+                              handleUpdateClassification(t.id, "requestedByDept", e.target.value)
+                            }
+                            disabled={savingId === t.id}
+                            className="w-full text-[11px] font-medium bg-white border border-slate-300 hover:border-slate-400 rounded py-1 px-1.5 focus:ring-1 focus:ring-slate-400 outline-none text-slate-800 transition"
+                          >
+                            <option value="">-- General Logistics --</option>
+                            {masterOptions.requestedByDepts.map((d) => (
+                              <option key={d.code} value={d.name}>
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* Request Codes (Strictly Single-line, No multiple lines) */}
+                        <td className="py-2 px-3.5 whitespace-nowrap border-b border-r border-slate-200 bg-inherit font-mono text-[11px] text-slate-700">
+                          {reqList.length > 0 ? (
+                            <span>{reqList.map((r: any) => r.requestCode).join(", ")}</span>
+                          ) : (
+                            <span className="text-slate-400 italic">None</span>
+                          )}
                         </td>
 
                         {/* 4. EDITABLE: Remarks / Notes */}
@@ -1685,7 +1683,7 @@ export function FullTripDetailsClient({
           />
 
           {/* Side Drawer Panel */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[560px] md:w-[640px] bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[680px] md:w-[780px] lg:w-[860px] bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0 shadow-sm">
               <div className="flex items-center gap-2.5">
