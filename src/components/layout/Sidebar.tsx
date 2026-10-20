@@ -55,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (href === "/allocations/fg") return pathname === "/allocations/fg";
     if (href === "/requests") return pathname === "/requests" || (pathname.startsWith("/requests/") && pathname !== "/requests/create");
     if (href === "/reports") return pathname === "/reports";
+    if (href === "/trips") return pathname === "/trips" || (pathname.startsWith("/trips/") && !pathname.startsWith("/trips/full-details"));
     return pathname === href || pathname.startsWith(href + "/");
   };
 

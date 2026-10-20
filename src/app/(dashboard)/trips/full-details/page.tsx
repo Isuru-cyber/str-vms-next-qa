@@ -13,7 +13,14 @@ export default async function FullTripDetailsPage() {
     redirect("/login");
   }
 
-  // Plant access filter for non-admin
+  // Authorization check: User must have view_trips permission
+  if (!can(user, "view_trips")) {
+    redirect("/");
+  }
+
+  // Plant access filter:
+  // If non-admin user has specific assigned plants, filter by those plants.
+  // If user has company-wide access (no plantIds or isAdmin), show all trips.
   const where: any = {};
   if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
     where.tripRequests = {
@@ -23,8 +30,6 @@ export default async function FullTripDetailsPage() {
         },
       },
     };
-  } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
-    where.id = -1;
   }
 
   let trips: any[] = [];
@@ -36,7 +41,7 @@ export default async function FullTripDetailsPage() {
     const [dbTrips, dbPlants, dbVehicles, dbMaster] = await Promise.all([
       prisma.deliveryTrip.findMany({
         where,
-        take: 300,
+        take: 1000,
         orderBy: { id: "desc" },
         include: {
           vehicle: {
@@ -72,6 +77,9 @@ export default async function FullTripDetailsPage() {
               },
             },
             orderBy: { loadingSequence: "asc" },
+          },
+          completedByUser: {
+            select: { id: true, name: true, email: true },
           },
         },
       }),
@@ -110,7 +118,7 @@ export default async function FullTripDetailsPage() {
     vehicles = JSON.parse(JSON.stringify(dbVehicles));
     masterOptions = JSON.parse(JSON.stringify(dbMaster));
   } catch (error) {
-    console.error("Error loading full trip details:", error);
+    console.error("Error loading full trip details in SSR:", error);
   }
 
   const deliveryWindows = masterOptions

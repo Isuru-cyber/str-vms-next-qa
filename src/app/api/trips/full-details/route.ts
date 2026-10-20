@@ -31,8 +31,6 @@ export async function GET(request: NextRequest) {
           },
         },
       };
-    } else if (!isAdmin(user) && (!user.plantIds || user.plantIds.length === 0)) {
-      where.id = -1;
     }
 
     // 2. Specific Plant filter
@@ -143,6 +141,9 @@ export async function GET(request: NextRequest) {
               },
             },
             orderBy: { loadingSequence: "asc" },
+          },
+          completedByUser: {
+            select: { id: true, name: true, email: true },
           },
         },
       }),
