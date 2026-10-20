@@ -98,6 +98,17 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Trip not found." }, { status: 404 });
     }
 
+    // Gate passes can strictly only be recorded for trips that are COMPLETED (or reconciled/closed)
+    if (trip.status === "ASSIGNED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Trip #${trip.tripNo} is in ASSIGNED status. Gate Passes can only be entered after the trip is marked COMPLETED.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Plant access validation for non-admins
     if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
       const hasPlantAccess = trip.tripRequests.some(

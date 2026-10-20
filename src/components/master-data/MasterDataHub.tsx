@@ -15,6 +15,9 @@ import {
   Database,
   Building2,
   Tag,
+  Clock,
+  Sparkles,
+  Users,
 } from "lucide-react";
 
 interface MasterDataHubProps {
@@ -22,6 +25,9 @@ interface MasterDataHubProps {
   initialSubOperations: any[];
   initialPlants?: any[];
   initialVehicleCategories?: any[];
+  initialDeliveryWindows?: any[];
+  initialPlanningTypes?: any[];
+  initialRequestedByDepts?: any[];
 }
 
 export function MasterDataHub({
@@ -29,14 +35,28 @@ export function MasterDataHub({
   initialSubOperations = [],
   initialPlants = [],
   initialVehicleCategories = [],
+  initialDeliveryWindows = [],
+  initialPlanningTypes = [],
+  initialRequestedByDepts = [],
 }: MasterDataHubProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"VEHICLE_TYPE" | "VEHICLE_CATEGORY" | "SUB_OPERATION" | "PLANT">("VEHICLE_TYPE");
+  const [activeTab, setActiveTab] = useState<
+    | "VEHICLE_TYPE"
+    | "VEHICLE_CATEGORY"
+    | "SUB_OPERATION"
+    | "PLANT"
+    | "DELIVERY_WINDOW"
+    | "PLANNING_TYPE"
+    | "REQUESTED_BY"
+  >("VEHICLE_TYPE");
 
   const [vTypes, setVTypes] = useState(initialVehicleTypes);
   const [vCategories, setVCategories] = useState(initialVehicleCategories);
   const [subOps, setSubOps] = useState(initialSubOperations);
   const [plants, setPlants] = useState(initialPlants);
+  const [dWindows, setDWindows] = useState(initialDeliveryWindows);
+  const [pTypes, setPTypes] = useState(initialPlanningTypes);
+  const [reqDepts, setReqDepts] = useState(initialRequestedByDepts);
 
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -167,6 +187,12 @@ export function MasterDataHub({
             setVTypes((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
           } else if (activeTab === "VEHICLE_CATEGORY") {
             setVCategories((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
+          } else if (activeTab === "DELIVERY_WINDOW") {
+            setDWindows((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
+          } else if (activeTab === "PLANNING_TYPE") {
+            setPTypes((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
+          } else if (activeTab === "REQUESTED_BY") {
+            setReqDepts((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
           } else {
             setSubOps((prev) => prev.map((i) => (i.id === editingItem.id ? data.data : i)));
           }
@@ -184,6 +210,12 @@ export function MasterDataHub({
             setVTypes((prev) => [...prev, data.data]);
           } else if (activeTab === "VEHICLE_CATEGORY") {
             setVCategories((prev) => [...prev, data.data]);
+          } else if (activeTab === "DELIVERY_WINDOW") {
+            setDWindows((prev) => [...prev, data.data]);
+          } else if (activeTab === "PLANNING_TYPE") {
+            setPTypes((prev) => [...prev, data.data]);
+          } else if (activeTab === "REQUESTED_BY") {
+            setReqDepts((prev) => [...prev, data.data]);
           } else {
             setSubOps((prev) => [...prev, data.data]);
           }
@@ -223,6 +255,12 @@ export function MasterDataHub({
         setVTypes((prev) => prev.filter((i) => i.id !== id));
       } else if (activeTab === "VEHICLE_CATEGORY") {
         setVCategories((prev) => prev.filter((i) => i.id !== id));
+      } else if (activeTab === "DELIVERY_WINDOW") {
+        setDWindows((prev) => prev.filter((i) => i.id !== id));
+      } else if (activeTab === "PLANNING_TYPE") {
+        setPTypes((prev) => prev.filter((i) => i.id !== id));
+      } else if (activeTab === "REQUESTED_BY") {
+        setReqDepts((prev) => prev.filter((i) => i.id !== id));
       } else {
         setSubOps((prev) => prev.filter((i) => i.id !== id));
       }
@@ -239,6 +277,12 @@ export function MasterDataHub({
       ? vCategories
       : activeTab === "SUB_OPERATION"
       ? subOps
+      : activeTab === "DELIVERY_WINDOW"
+      ? dWindows
+      : activeTab === "PLANNING_TYPE"
+      ? pTypes
+      : activeTab === "REQUESTED_BY"
+      ? reqDepts
       : plants;
   const filteredList = currentList.filter(
     (i) =>
@@ -312,6 +356,51 @@ export function MasterDataHub({
               {plants.length}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("DELIVERY_WINDOW")}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === "DELIVERY_WINDOW"
+                ? "bg-white shadow-2xs text-blue-700"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Delivery Windows</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 tabular-nums">
+              {dWindows.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("PLANNING_TYPE")}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === "PLANNING_TYPE"
+                ? "bg-white shadow-2xs text-blue-700"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Planning Categories</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 tabular-nums">
+              {pTypes.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("REQUESTED_BY")}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === "REQUESTED_BY"
+                ? "bg-white shadow-2xs text-blue-700"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Requested By Depts</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 tabular-nums">
+              {reqDepts.length}
+            </span>
+          </button>
         </div>
 
         {/* Search and Add Button */}
@@ -350,6 +439,12 @@ export function MasterDataHub({
                     ? "Category Name"
                     : activeTab === "SUB_OPERATION"
                     ? "Sub-Operation"
+                    : activeTab === "DELIVERY_WINDOW"
+                    ? "Delivery Window"
+                    : activeTab === "PLANNING_TYPE"
+                    ? "Planning Category"
+                    : activeTab === "REQUESTED_BY"
+                    ? "Department Name"
                     : "Plant Name"}
                 </th>
                 <th className="py-2.5 px-3 w-32 text-center">System Code</th>

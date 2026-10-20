@@ -44,6 +44,17 @@ export async function PATCH(
       return NextResponse.json({ success: false, message: "Trip not found." }, { status: 404 });
     }
 
+    // Actual KM can strictly only be recorded for trips that are COMPLETED (or reconciled/closed)
+    if (trip.status === "ASSIGNED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Trip #${trip.tripNo} is in ASSIGNED status. Actual KM from driver running sheet can only be logged after the trip is marked COMPLETED.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Plant access check for non-admin
     if (!isAdmin(user) && user.plantIds && user.plantIds.length > 0) {
       const hasPlantAccess = trip.tripRequests.some(

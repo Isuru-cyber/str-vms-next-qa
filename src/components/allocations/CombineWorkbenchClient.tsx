@@ -164,6 +164,14 @@ export function CombineWorkbenchClient({
 
   const [isCompleting, setIsCompleting] = useState(false);
 
+  // Reopen Completed Trip Modal State
+  const [reopenModalOpen, setReopenModalOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState("");
+  const [reopeningTrip, setReopeningTrip] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
+  const [reopenSuccess, setReopenSuccess] = useState<string | null>(null);
+  const [reopenWarnings, setReopenWarnings] = useState<string[]>([]);
+
   const isCompleted = ["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(trip?.status);
   const isDispatched = ["DISPATCHED", "IN_TRANSIT"].includes(trip?.status);
   const isLocked = isCompleted || isDispatched || trip?.status === "READY_FOR_LOADING";
@@ -764,6 +772,47 @@ export function CombineWorkbenchClient({
     });
   };
 
+  // Reopen Completed Trip (COMPLETED -> ASSIGNED)
+  const handleReopenTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reopenReason.trim() || reopenReason.trim().length < 5) {
+      setReopenError("Please enter an explanation of at least 5 characters.");
+      return;
+    }
+
+    setReopeningTrip(true);
+    setReopenError(null);
+    setReopenWarnings([]);
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/reopen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reopenReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to reopen trip.");
+      }
+
+      if (data.warnings && data.warnings.length > 0) {
+        setReopenWarnings(data.warnings);
+      }
+
+      setTrip((prev: any) => ({ ...prev, status: "ASSIGNED" }));
+      setReopenSuccess(data.message || "Trip reopened to ASSIGNED successfully.");
+      showToast("success", `Trip #${trip.tripNo} successfully reopened to ASSIGNED. Workbench unlocked!`);
+      setTimeout(() => {
+        setReopenModalOpen(false);
+        setReopenSuccess(null);
+        router.refresh();
+      }, 1200);
+    } catch (err: any) {
+      setReopenError(err.message || "Error reopening trip.");
+    } finally {
+      setReopeningTrip(false);
+    }
+  };
+
   // Quick Dispatch Complete (Locks edits, marks COMPLETED, releases fleet to AVAILABLE)
   const handleQuickDispatchComplete = async () => {
     if (includedRequests.length === 0) {
@@ -1223,6 +1272,23 @@ export function CombineWorkbenchClient({
                 <span>Go to Reconciliation</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
+              {trip?.status === "COMPLETED" && (!trip?.reconciliations || trip?.reconciliations.length === 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReopenReason("");
+                    setReopenError(null);
+                    setReopenSuccess(null);
+                    setReopenWarnings([]);
+                    setReopenModalOpen(true);
+                  }}
+                  className="bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  title="Reopen trip back to ASSIGNED to add more cargo or modify requests"
+                >
+                  <RotateCcw className="w-4 h-4 font-bold" />
+                  <span>Reopen to ASSIGNED</span>
+                </button>
+              )}
             </div>
           ) : isDispatched ? (
             <div className="flex items-center gap-2">
@@ -2992,6 +3058,159 @@ export function CombineWorkbenchClient({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reopen Completed Trip (COMPLETED -> ASSIGNED) */}
+      {reopenModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-gradient-to-r from-rose-900 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm tracking-tight flex items-center gap-2">
+                    Reopen Trip — {trip?.tripNo}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    Step Back: COMPLETED &rarr; ASSIGNED
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReopenModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body Form */}
+            <form onSubmit={handleReopenTrip} className="p-4 space-y-3.5 text-xs">
+              {/* Trip Metadata Box */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900">
+                    Trip #{trip?.tripNo}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold text-[10px]">
+                    Current: COMPLETED
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div>
+                    <span className="text-slate-400">Vehicle:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {trip?.vehicle?.vehicleNumber || "None"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Driver:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {trip?.driver?.name || "None"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Included Requests:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {includedRequests.length} order(s)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Route:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {trip?.route?.routeName || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informational Callout */}
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  What happens when you reopen:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800 pl-1">
+                  <li>Status changes back to <strong>ASSIGNED</strong> (Trip is NOT deleted).</li>
+                  <li>All linked requests return to <strong>ALLOCATED</strong>.</li>
+                  <li>The Combine Workbench unlocks instantly so you can attach more requests or cargo.</li>
+                  <li>Once updated, click &apos;⚡ Complete Trip&apos; again to finalize.</li>
+                </ul>
+              </div>
+
+              {/* Reason Input */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Reason for Reopening <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  placeholder="e.g. Need to allocate 2 additional urgent customer return orders to this manifest before ERP settlement..."
+                  rows={3}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none resize-none"
+                />
+                <span className="text-[10px] text-slate-400">
+                  Minimum 5 characters. This explanation will be permanently recorded in enterprise audit logs.
+                </span>
+              </div>
+
+              {/* Error Alert */}
+              {reopenError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{reopenError}</span>
+                </div>
+              )}
+
+              {/* Warnings Alert */}
+              {reopenWarnings.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs space-y-1">
+                  <p className="font-bold flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    Fleet Notice:
+                  </p>
+                  {reopenWarnings.map((w, idx) => (
+                    <p key={idx} className="text-[11px]">&bull; {w}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Success Alert */}
+              {reopenSuccess && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{reopenSuccess}</span>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReopenModalOpen(false)}
+                  disabled={reopeningTrip}
+                  className="h-8 px-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reopeningTrip || reopenReason.trim().length < 5}
+                  className="h-8 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${reopeningTrip ? "animate-spin" : ""}`} />
+                  <span>{reopeningTrip ? "Reopening..." : "Confirm Reopen to ASSIGNED"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

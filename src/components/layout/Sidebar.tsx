@@ -114,6 +114,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           visible: can(user, "view_trips"),
         },
         {
+          name: "Full Trip Details",
+          href: "/trips/full-details",
+          icon: FileSpreadsheet,
+          visible: can(user, "view_trips"),
+        },
+        {
           name: "Datatex Reconcile",
           href: "/reconciliation",
           icon: FileCheck2,

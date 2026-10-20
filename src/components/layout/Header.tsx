@@ -189,6 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (path === "/requests") return "All Transport Requests";
     if (path === "/routes") return "Route Master & Multi-Stop Sequencing";
     if (path === "/locations") return "Location Master";
+    if (path === "/trips/full-details") return "Full Trip Details & Analytics";
     if (path === "/trips") return "Delivery Trips";
     if (path.startsWith("/trips/")) return "Trip Details";
     if (path === "/dispatch/daily-summary") return "Daily Operations";

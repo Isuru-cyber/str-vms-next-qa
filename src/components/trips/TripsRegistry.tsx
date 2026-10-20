@@ -943,31 +943,30 @@ export const TripsRegistry: React.FC<TripsRegistryProps> = ({
                             <Eye className="w-3.5 h-3.5" />
                           </Link>
 
-                          {/* Gate Pass Scanner / Entry Button */}
-                          {canManageGatePass && (
-                            <button
-                              type="button"
-                              onClick={() => openGpModal(t)}
-                              className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all shadow-2xs cursor-pointer ${
-                                t.gatePasses && t.gatePasses.length > 0
-                                  ? "bg-slate-100 hover:bg-indigo-50 text-indigo-700 hover:text-indigo-800 border border-slate-200"
-                                  : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 font-bold"
-                              }`}
-                              title={
-                                t.gatePasses && t.gatePasses.length > 0
-                                  ? `Manage Gate Passes (${t.gatePasses.map((g) => g.gatePassNo).join(", ")})`
-                                  : "Scan / Record Gate Pass"
-                              }
-                            >
-                              <Ticket className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          {/* Gate Pass Scanner / Entry Button (Enabled strictly after trip is COMPLETED) */}
+                          {canManageGatePass &&
+                            ["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(t.status) && (
+                              <button
+                                type="button"
+                                onClick={() => openGpModal(t)}
+                                className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all shadow-2xs cursor-pointer ${
+                                  t.gatePasses && t.gatePasses.length > 0
+                                    ? "bg-slate-100 hover:bg-indigo-50 text-indigo-700 hover:text-indigo-800 border border-slate-200"
+                                    : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 font-bold"
+                                }`}
+                                title={
+                                  t.gatePasses && t.gatePasses.length > 0
+                                    ? `Manage Gate Passes (${t.gatePasses.map((g) => g.gatePassNo).join(", ")})`
+                                    : "Scan / Record Gate Pass"
+                                }
+                              >
+                                <Ticket className="w-3.5 h-3.5" />
+                              </button>
+                            )}
 
-                          {/* Enter / Edit KM Icon Button */}
+                          {/* Enter / Edit KM Icon Button (Enabled strictly after trip is COMPLETED) */}
                           {canEnterOdometer &&
-                            ["DISPATCHED", "READY_FOR_LOADING", "GATE_PASS_ISSUED", "IN_TRANSIT", "COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(
-                              t.status
-                            ) && (
+                            ["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(t.status) && (
                               <button
                                 type="button"
                                 onClick={() => openKmModal(t)}
