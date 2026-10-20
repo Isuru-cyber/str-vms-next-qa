@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
             "READY_FOR_LOADING",
             "DISPATCHED",
             "IN_TRANSIT",
-            "GATE_PASS_ISSUED",
             "RECONCILED",
             "COMPLETED",
           ];

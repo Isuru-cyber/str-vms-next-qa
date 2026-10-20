@@ -142,7 +142,7 @@ export async function POST(
       }
     }
 
-    // Atomic transaction: replace gate passes and optionally advance status if un-dispatched
+    // Atomic transaction: replace gate passes without altering trip workflow status
     const updatedGatePasses = await prisma.$transaction(async (tx: any) => {
       // 1. Remove existing gate passes for this trip
       await tx.tripGatePass.deleteMany({
@@ -158,17 +158,6 @@ export async function POST(
             status: "ENTERED",
             enteredBy: user.id,
           })),
-        });
-      }
-
-      // 3. If trip is in ASSIGNED or ALLOCATED status and GP is added, transition to GATE_PASS_ISSUED
-      if (
-        cleanGatePassNos.length > 0 &&
-        ["ASSIGNED", "ALLOCATED"].includes(trip.status)
-      ) {
-        await tx.deliveryTrip.update({
-          where: { id: tripId },
-          data: { status: "GATE_PASS_ISSUED" },
         });
       }
 

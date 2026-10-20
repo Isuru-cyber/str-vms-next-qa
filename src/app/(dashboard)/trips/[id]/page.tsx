@@ -2,7 +2,7 @@ import React from "react";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { isAdmin, canAccessPlant } from "@/lib/permissions";
+import { isAdmin, can, canAccessPlant } from "@/lib/permissions";
 import { TripManifestView } from "@/components/trips/TripManifestView";
 
 export const dynamic = "force-dynamic";
@@ -24,50 +24,64 @@ export default async function TripDetailPage({
   }
 
   let trip: any = null;
+  let companyName = "STR";
+  let systemName = "Transport Management System";
   try {
-    const dbTrip = await prisma.deliveryTrip.findUnique({
-      where: { id: tripId },
-      include: {
-        vehicle: {
-          include: {
-            defaultLocation: true,
-          },
-        },
-        driver: true,
-        route: {
-          include: {
-            originLocation: true,
-            stops: {
-              include: { location: true },
-              orderBy: { stopSequence: "asc" },
+    const [dbTrip, settings] = await Promise.all([
+      prisma.deliveryTrip.findUnique({
+        where: { id: tripId },
+        include: {
+          vehicle: {
+            include: {
+              defaultLocation: true,
             },
           },
-        },
-        tripRequests: {
-          include: {
-            request: {
-              include: {
-                plant: true,
-                fromLocation: true,
-                toLocation: true,
-                requester: {
-                  select: { id: true, name: true, email: true, userCode: true },
-                },
-                subOperation: true,
+          driver: true,
+          route: {
+            include: {
+              originLocation: true,
+              stops: {
+                include: { location: true },
+                orderBy: { stopSequence: "asc" },
               },
             },
           },
-          orderBy: { loadingSequence: "asc" },
+          tripRequests: {
+            include: {
+              request: {
+                include: {
+                  plant: true,
+                  fromLocation: true,
+                  toLocation: true,
+                  requester: {
+                    select: { id: true, name: true, email: true, userCode: true },
+                  },
+                  subOperation: true,
+                },
+              },
+            },
+            orderBy: { loadingSequence: "asc" },
+          },
+          gatePasses: {
+            orderBy: { id: "asc" },
+          },
+          reconciliations: {
+            orderBy: { id: "desc" },
+            take: 1,
+          },
         },
-        gatePasses: {
-          orderBy: { id: "asc" },
-        },
-        reconciliations: {
-          orderBy: { id: "desc" },
-          take: 1,
-        },
-      },
-    });
+      }),
+      prisma.systemSetting.findMany({
+        where: { settingKey: { in: ["COMPANY_NAME", "SYSTEM_NAME"] } },
+      }),
+    ]);
+
+    if (settings && settings.length > 0) {
+      const c = settings.find((s) => s.settingKey === "COMPANY_NAME")?.settingValue;
+      if (c) companyName = c.trim();
+      const sys = settings.find((s) => s.settingKey === "SYSTEM_NAME")?.settingValue;
+      if (sys) systemName = sys.trim();
+    }
 
     if (dbTrip) {
       trip = JSON.parse(JSON.stringify(dbTrip));
@@ -90,5 +104,14 @@ export default async function TripDetailPage({
     }
   }
 
-  return <TripManifestView trip={trip} />;
+  const canReopenTrip = can(user, "reopen_trips") || isAdmin(user);
+
+  return (
+    <TripManifestView
+      trip={trip}
+      companyName={companyName}
+      systemName={systemName}
+      canReopenTrip={canReopenTrip}
+    />
+  );
 }

@@ -165,7 +165,7 @@ export function CombineWorkbenchClient({
   const [isCompleting, setIsCompleting] = useState(false);
 
   const isCompleted = ["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(trip?.status);
-  const isDispatched = ["DISPATCHED", "IN_TRANSIT", "GATE_PASS_ISSUED"].includes(trip?.status);
+  const isDispatched = ["DISPATCHED", "IN_TRANSIT"].includes(trip?.status);
   const isLocked = isCompleted || isDispatched || trip?.status === "READY_FOR_LOADING";
 
   const getLifecycleStatusLabel = (status: string | undefined) => {
@@ -1223,14 +1223,6 @@ export function CombineWorkbenchClient({
                 <span>Go to Reconciliation</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-              <Link
-                href="/pod"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-                title="Go to POD Hub"
-              >
-                <span>Go to POD Hub</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
             </div>
           ) : isDispatched ? (
             <div className="flex items-center gap-2">
@@ -1291,13 +1283,13 @@ export function CombineWorkbenchClient({
               </button>
               <button
                 type="button"
-                onClick={handleDispatchDeck}
+                onClick={handleQuickDispatchComplete}
                 disabled={saving || isCompleting}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer"
-                title="Dispatch this allocation to Factory Loading Deck for physical loading & gate pass"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer"
+                title="Complete this trip: Locks edits, marks requests COMPLETED, and releases vehicle & driver to AVAILABLE"
               >
-                <Truck className="w-4 h-4 font-bold" />
-                <span>Dispatch to Deck</span>
+                <CheckCircle2 className="w-4 h-4 font-bold" />
+                <span>{isCompleting ? "Completing..." : "Complete Trip"}</span>
               </button>
               <button
                 type="button"

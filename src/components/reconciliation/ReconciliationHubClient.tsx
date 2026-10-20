@@ -623,17 +623,6 @@ export function ReconciliationHubClient({ initialTrips }: ReconciliationHubClien
                                   <span>Finalize</span>
                                 </button>
                               )}
-
-                              {isFinalized && (
-                                <Link
-                                  href="/pod"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200 cursor-pointer shadow-2xs"
-                                  title="View Proof of Delivery (POD) for this trip"
-                                >
-                                  <FileCheck2 className="w-3.5 h-3.5 text-indigo-600" />
-                                  <span>POD Hub</span>
-                                </Link>
-                              )}
                             </div>
                           </td>
                         </tr>

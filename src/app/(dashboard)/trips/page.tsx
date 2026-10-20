@@ -65,6 +65,14 @@ export default async function TripsPage() {
 
   const canEnterOdometer = can(user, "enter_odometer") || isAdmin(user);
   const canManageGatePass = can(user, "issue_gate_pass") || can(user, "dispatch_trips") || can(user, "dispatch_audit") || isAdmin(user);
+  const canReopenTrip = can(user, "reopen_trips") || isAdmin(user);
 
-  return <TripsRegistry initialTrips={trips} canEnterOdometer={canEnterOdometer} canManageGatePass={canManageGatePass} />;
+  return (
+    <TripsRegistry
+      initialTrips={trips}
+      canEnterOdometer={canEnterOdometer}
+      canManageGatePass={canManageGatePass}
+      canReopenTrip={canReopenTrip}
+    />
+  );
 }

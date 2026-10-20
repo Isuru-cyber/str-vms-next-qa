@@ -23,16 +23,34 @@ import {
   Copy,
   Check,
   X,
+  RotateCcw,
+  AlertCircle,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatNumber, formatCurrency } from "@/lib/utils";
 
 interface TripManifestProps {
   trip: any;
+  companyName?: string;
+  systemName?: string;
+  canReopenTrip?: boolean;
 }
 
-export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
+export const TripManifestView: React.FC<TripManifestProps> = ({
+  trip,
+  companyName = "STR",
+  systemName = "Transport Management System",
+  canReopenTrip = false,
+}) => {
   const router = useRouter();
+
+  const [tripState, setTripState] = useState(trip);
+  const [reopenModalOpen, setReopenModalOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState("");
+  const [reopeningTrip, setReopeningTrip] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
+  const [reopenSuccess, setReopenSuccess] = useState<string | null>(null);
+  const [reopenWarnings, setReopenWarnings] = useState<string[]>([]);
 
   const [outlookModalOpen, setOutlookModalOpen] = useState(false);
   const [draftSubject, setDraftSubject] = useState("");
@@ -41,6 +59,45 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
   const [copyBodySuccess, setCopyBodySuccess] = useState(false);
   const [mailTemplates, setMailTemplates] = useState<any[]>([]);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState("allocation_confirmed");
+
+  const handleReopenTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reopenReason.trim() || reopenReason.trim().length < 5) {
+      setReopenError("Please enter an explanation of at least 5 characters.");
+      return;
+    }
+
+    setReopeningTrip(true);
+    setReopenError(null);
+    setReopenWarnings([]);
+    try {
+      const res = await fetch(`/api/trips/${tripState.id}/reopen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reopenReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to reopen trip.");
+      }
+
+      if (data.warnings && data.warnings.length > 0) {
+        setReopenWarnings(data.warnings);
+      }
+
+      setTripState((prev: any) => ({ ...prev, status: "ASSIGNED" }));
+      setReopenSuccess(data.message || "Trip reopened to ASSIGNED successfully.");
+      setTimeout(() => {
+        setReopenModalOpen(false);
+        setReopenSuccess(null);
+        router.refresh();
+      }, 1500);
+    } catch (err: any) {
+      setReopenError(err.message || "Error reopening trip.");
+    } finally {
+      setReopeningTrip(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -85,7 +142,7 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
       templateKey: "allocation_confirmed",
       name: "Vehicle Allocation Confirmation",
       subject: "Vehicle Allocation Confirmed: Trip {trip_no} | {vehicle_number} - {route_name}",
-      body: `Dear Requester(s),\n\nWe are pleased to inform you that your transportation request(s) have been successfully allocated and scheduled for dispatch.\n\n=======================================================\nTRIP & ALLOCATION DETAILS\n=======================================================\n• Trip Number      : {trip_no}\n• Allocation Date  : {allocation_date}\n• Assigned Route   : {route_name}\n• Trip Status      : {status}\n• Planned Distance : {planned_km} km\n\n=======================================================\nASSIGNED FLEET & DRIVER DETAILS\n=======================================================\n• Vehicle Number   : {vehicle_number} ({vehicle_type})\n• Driver Name      : {driver_name}\n• Driver NIC / ID  : {driver_nic}\n• Contact Mobile   : {driver_mobile}\n• License Number   : {driver_license}\n\n=======================================================\nALLOCATED REQUESTS BREAKDOWN\n=======================================================\n{requests_breakdown}\n\n=======================================================\nPlease ensure all gate passes, loading bays, and personnel are prepared accordingly.\nFor any inquiries or schedule updates, please contact the Logistics & Fleet Desk.\n\nBest Regards,\nLogistics & Fleet Operations Team\nSTR Vehicle Management System (VMS)`,
+      body: `Dear Requester(s),\n\nWe are pleased to inform you that your transportation request(s) have been successfully allocated and scheduled for dispatch.\n\n=======================================================\nTRIP & ALLOCATION DETAILS\n=======================================================\n• Trip Number      : {trip_no}\n• Allocation Date  : {allocation_date}\n• Assigned Route   : {route_name}\n• Trip Status      : {status}\n• Planned Distance : {planned_km} km\n\n=======================================================\nASSIGNED FLEET & DRIVER DETAILS\n=======================================================\n• Vehicle Number   : {vehicle_number} ({vehicle_type})\n• Driver Name      : {driver_name}\n• Driver NIC / ID  : {driver_nic}\n• Contact Mobile   : {driver_mobile}\n• License Number   : {driver_license}\n\n=======================================================\nALLOCATED REQUESTS BREAKDOWN\n=======================================================\n{requests_breakdown}\n\n=======================================================\nPlease ensure all gate passes, loading bays, and personnel are prepared accordingly.\nFor any inquiries or schedule updates, please contact the Logistics & Fleet Desk.\n\nBest Regards,\nLogistics & Fleet Operations Team\nSTR Transport Management System (TMS)`,
     };
 
     const tpl = mailTemplates.find((t) => t.templateKey === tKey) || defaultTemplate;
@@ -188,12 +245,12 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
             <h1 className="text-base font-bold text-gray-900 tracking-tight">
               Trip Details: {trip.tripNo}
             </h1>
-            <StatusBadge status={trip.status} />
+            <StatusBadge status={tripState.status} />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {trip.status === "ASSIGNED" && (
+          {tripState.status === "ASSIGNED" && (
             <Link
               href="/allocations/fg/combine"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-xs transition-colors"
@@ -203,23 +260,33 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
             </Link>
           )}
 
-          {["COMPLETED", "RECONCILED", "DISPATCHED", "IN_TRANSIT", "READY_FOR_LOADING"].includes(trip.status) && (
+          {canReopenTrip &&
+            tripState.status === "COMPLETED" &&
+            (!tripState.reconciliations || tripState.reconciliations.length === 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReopenReason("");
+                  setReopenError(null);
+                  setReopenSuccess(null);
+                  setReopenWarnings([]);
+                  setReopenModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                title="Reopen completed trip back to ASSIGNED state"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Reopen to ASSIGNED</span>
+              </button>
+            )}
+
+          {["COMPLETED", "RECONCILED", "DISPATCHED", "IN_TRANSIT", "READY_FOR_LOADING"].includes(tripState.status) && (
             <Link
               href="/reconciliation"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-xs transition-colors"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Datatex Reconciliation</span>
-            </Link>
-          )}
-
-          {["COMPLETED", "RECONCILED", "FINALIZED", "CLOSED"].includes(trip.status) && (
-            <Link
-              href="/pod"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-colors"
-            >
-              <FileText className="w-4 h-4" />
-              <span>POD Hub</span>
             </Link>
           )}
 
@@ -260,7 +327,7 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
               </div>
               <div>
                 <h2 className="text-base font-bold text-gray-900 uppercase tracking-wide">
-                  South Asia Textiles Industries - Logistics VMS
+                  {companyName} - {systemName}
                 </h2>
                 <p className="text-xs text-gray-500">
                   Factory Dispatch Slip & Vehicle Delivery Manifest
@@ -504,7 +571,7 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
         <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-3">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Digital Trip Record &bull; South Asia Textiles Logistics Management System</span>
+            <span>Digital Trip Record &bull; {companyName} {systemName}</span>
           </div>
           <p className="tabular-nums">
             Generated on {new Date().toLocaleDateString()} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -694,6 +761,159 @@ export const TripManifestView: React.FC<TripManifestProps> = ({ trip }) => {
                 <span>Open in Outlook / Mail Client</span>
               </a>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reopen Completed Trip (COMPLETED -> ASSIGNED) */}
+      {reopenModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-gradient-to-r from-rose-900 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm tracking-tight flex items-center gap-2">
+                    Reopen Trip — {trip.tripNo}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    Step Back: COMPLETED &rarr; ASSIGNED
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReopenModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body Form */}
+            <form onSubmit={handleReopenTrip} className="p-4 space-y-3.5 text-xs">
+              {/* Trip Metadata Box */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900">
+                    Trip #{trip.tripNo}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold text-[10px]">
+                    Current: COMPLETED
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div>
+                    <span className="text-slate-400">Vehicle:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {trip.vehicle?.vehicleNumber || "None"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Driver:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {trip.driver?.name || "None"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Linked Requests:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {requests.length} order(s)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Route:</span>{" "}
+                    <span className="font-medium text-slate-800">
+                      {trip.route?.routeName || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informational Callout */}
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  What happens when you reopen:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800 pl-1">
+                  <li>Status changes back to <strong>ASSIGNED</strong> (Trip is NOT deleted).</li>
+                  <li>Linked requests return to <strong>ALLOCATED</strong>.</li>
+                  <li>Trip immediately reopens in Combine Workbench to attach more requests/cargo.</li>
+                  <li>Once updated, click &apos;Quick Dispatch Complete&apos; to finish the trip again.</li>
+                </ul>
+              </div>
+
+              {/* Reason Input */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Reason for Reopening <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  placeholder="e.g. Need to allocate 2 additional urgent customer return orders to this manifest before ERP settlement..."
+                  rows={3}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none resize-none"
+                />
+                <span className="text-[10px] text-slate-400">
+                  Minimum 5 characters. This explanation will be permanently recorded in enterprise audit logs.
+                </span>
+              </div>
+
+              {/* Error Alert */}
+              {reopenError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{reopenError}</span>
+                </div>
+              )}
+
+              {/* Warnings Alert */}
+              {reopenWarnings.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs space-y-1">
+                  <p className="font-bold flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    Fleet Notice:
+                  </p>
+                  {reopenWarnings.map((w, idx) => (
+                    <p key={idx} className="text-[11px]">&bull; {w}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Success Alert */}
+              {reopenSuccess && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{reopenSuccess}</span>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReopenModalOpen(false)}
+                  disabled={reopeningTrip}
+                  className="h-8 px-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reopeningTrip || reopenReason.trim().length < 5}
+                  className="h-8 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${reopeningTrip ? "animate-spin" : ""}`} />
+                  <span>{reopeningTrip ? "Reopening..." : "Confirm Reopen to ASSIGNED"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
