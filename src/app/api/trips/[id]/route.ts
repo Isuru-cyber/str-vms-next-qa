@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorizeApi, isAdmin, canAccessPlant } from "@/lib/permissions";
+import { ACTIVE_TRIP_STATUSES } from "@/lib/constants";
 
 export async function GET(
   request: NextRequest,
@@ -125,22 +126,6 @@ export async function DELETE(
         });
       }
 
-      // Release vehicle
-      if (trip.vehicleId) {
-        await tx.vehicle.update({
-          where: { id: trip.vehicleId },
-          data: { status: "AVAILABLE" },
-        });
-      }
-
-      // Release driver
-      if (trip.driverId) {
-        await tx.driver.update({
-          where: { id: trip.driverId },
-          data: { status: "AVAILABLE" },
-        });
-      }
-
       // Delete trip request associations
       await tx.tripRequest.deleteMany({
         where: { tripId },
@@ -160,6 +145,38 @@ export async function DELETE(
       await tx.deliveryTrip.delete({
         where: { id: tripId },
       });
+
+      // Release vehicle if no other active trips exist
+      if (trip.vehicleId) {
+        const activeVehTrips = await tx.deliveryTrip.count({
+          where: {
+            vehicleId: trip.vehicleId,
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
+          },
+        });
+        if (activeVehTrips === 0) {
+          await tx.vehicle.update({
+            where: { id: trip.vehicleId },
+            data: { status: "AVAILABLE" },
+          });
+        }
+      }
+
+      // Release driver if no other active trips exist
+      if (trip.driverId) {
+        const activeDriverTrips = await tx.deliveryTrip.count({
+          where: {
+            driverId: trip.driverId,
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
+          },
+        });
+        if (activeDriverTrips === 0) {
+          await tx.driver.update({
+            where: { id: trip.driverId },
+            data: { status: "AVAILABLE" },
+          });
+        }
+      }
 
       await tx.activityLog.create({
         data: {

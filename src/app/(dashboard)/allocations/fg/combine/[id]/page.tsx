@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { ACTIVE_TRIP_STATUSES } from "@/lib/constants";
 import { CombineWorkbenchClient } from "@/components/allocations/CombineWorkbenchClient";
 
 export default async function CombineWorkbenchPage({
@@ -53,7 +54,7 @@ export default async function CombineWorkbenchPage({
       tripRequests: {
         none: {
           trip: {
-            status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
           },
         },
       },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorizeApi, isAdmin, canAccessPlant } from "@/lib/permissions";
+import { ACTIVE_TRIP_STATUSES } from "@/lib/constants";
 
 export async function POST(
   request: NextRequest,
@@ -71,20 +72,38 @@ export async function POST(
         });
       }
 
-      // 3. Release vehicle to AVAILABLE
+      // 3. Release vehicle if no other active trips exist
       if (trip.vehicleId) {
-        await tx.vehicle.update({
-          where: { id: trip.vehicleId },
-          data: { status: "AVAILABLE" },
+        const activeVehTrips = await tx.deliveryTrip.count({
+          where: {
+            vehicleId: trip.vehicleId,
+            id: { not: tripId },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
+          },
         });
+        if (activeVehTrips === 0) {
+          await tx.vehicle.update({
+            where: { id: trip.vehicleId },
+            data: { status: "AVAILABLE" },
+          });
+        }
       }
 
-      // 4. Release driver to AVAILABLE
+      // 4. Release driver if no other active trips exist
       if (trip.driverId) {
-        await tx.driver.update({
-          where: { id: trip.driverId },
-          data: { status: "AVAILABLE" },
+        const activeDriverTrips = await tx.deliveryTrip.count({
+          where: {
+            driverId: trip.driverId,
+            id: { not: tripId },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
+          },
         });
+        if (activeDriverTrips === 0) {
+          await tx.driver.update({
+            where: { id: trip.driverId },
+            data: { status: "AVAILABLE" },
+          });
+        }
       }
 
       // 5. Audit Log

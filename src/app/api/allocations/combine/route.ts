@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authorizeApi, isAdmin, canAccessPlant } from "@/lib/permissions";
 import { ActivityLogger } from "@/lib/logger";
 import { generateNextTripNo } from "@/lib/sequence";
+import { ACTIVE_TRIP_STATUSES, TERMINAL_TRIP_STATUSES, LOCKED_TRIP_STATUSES } from "@/lib/constants";
 
 async function canUserManageTrip(user: any, tripId: number, requireFullOwnership = false): Promise<boolean> {
   if (isAdmin(user)) return true;
@@ -91,15 +92,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (existingTrip) {
-          const lockedStatuses = [
-            "READY_FOR_LOADING",
-            "DISPATCHED",
-            "IN_TRANSIT",
-            "RECONCILED",
-            "COMPLETED",
-          ];
-
-          if (lockedStatuses.includes(existingTrip.status)) {
+          if ((LOCKED_TRIP_STATUSES as readonly string[]).includes(existingTrip.status)) {
             return NextResponse.json(
               {
                 success: false,
@@ -123,7 +116,7 @@ export async function POST(req: NextRequest) {
         const activeVehTrip = await prisma.deliveryTrip.findFirst({
           where: {
             vehicleId: Number(vehicleId),
-            status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
           },
           select: { tripNo: true },
         });
@@ -138,7 +131,7 @@ export async function POST(req: NextRequest) {
         const activeDriverTrip = await prisma.deliveryTrip.findFirst({
           where: {
             driverId: Number(driverId),
-            status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
           },
           select: { tripNo: true },
         });
@@ -454,9 +447,9 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Trip not found" }, { status: 404 });
         }
 
-        if (trip.status === "COMPLETED") {
+        if ((TERMINAL_TRIP_STATUSES as readonly string[]).includes(trip.status)) {
           return NextResponse.json(
-            { error: "Action Not Allowed: A Completed trip cannot be reversed." },
+            { error: `Action Not Allowed: A ${trip.status.toLowerCase()} trip cannot be reversed.` },
             { status: 400 }
           );
         }
@@ -483,16 +476,20 @@ export async function POST(req: NextRequest) {
             where: { tripId: Number(tripId) },
           });
 
+          // Delete the trip record
+          await tx.deliveryTrip.delete({
+            where: { id: Number(tripId) },
+          });
+
           // Release vehicle if no other active trip
           if (trip.vehicleId) {
-            const otherActiveVehTrips = await tx.deliveryTrip.count({
+            const activeVehTrips = await tx.deliveryTrip.count({
               where: {
                 vehicleId: trip.vehicleId,
-                id: { not: Number(tripId) },
-                status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+                status: { in: [...ACTIVE_TRIP_STATUSES] },
               },
             });
-            if (otherActiveVehTrips === 0) {
+            if (activeVehTrips === 0) {
               await tx.vehicle.update({
                 where: { id: trip.vehicleId },
                 data: { status: "AVAILABLE" },
@@ -502,25 +499,19 @@ export async function POST(req: NextRequest) {
 
           // Release driver if no other active trip
           if (trip.driverId) {
-            const otherActiveDriverTrips = await tx.deliveryTrip.count({
+            const activeDriverTrips = await tx.deliveryTrip.count({
               where: {
                 driverId: trip.driverId,
-                id: { not: Number(tripId) },
-                status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+                status: { in: [...ACTIVE_TRIP_STATUSES] },
               },
             });
-            if (otherActiveDriverTrips === 0) {
+            if (activeDriverTrips === 0) {
               await tx.driver.update({
                 where: { id: trip.driverId },
                 data: { status: "AVAILABLE" },
               });
             }
           }
-
-          // Delete the trip
-          await tx.deliveryTrip.delete({
-            where: { id: Number(tripId) },
-          });
         });
 
         await ActivityLogger.log(
@@ -569,18 +560,36 @@ export async function POST(req: NextRequest) {
             });
           }
 
-          // Release vehicle & driver
+          // Release vehicle & driver if no other active trips exist
           if (trip.vehicleId) {
-            await tx.vehicle.update({
-              where: { id: trip.vehicleId },
-              data: { status: "AVAILABLE" },
+            const activeVehTrips = await tx.deliveryTrip.count({
+              where: {
+                vehicleId: trip.vehicleId,
+                id: { not: Number(tripId) },
+                status: { in: [...ACTIVE_TRIP_STATUSES] },
+              },
             });
+            if (activeVehTrips === 0) {
+              await tx.vehicle.update({
+                where: { id: trip.vehicleId },
+                data: { status: "AVAILABLE" },
+              });
+            }
           }
           if (trip.driverId) {
-            await tx.driver.update({
-              where: { id: trip.driverId },
-              data: { status: "AVAILABLE" },
+            const activeDriverTrips = await tx.deliveryTrip.count({
+              where: {
+                driverId: trip.driverId,
+                id: { not: Number(tripId) },
+                status: { in: [...ACTIVE_TRIP_STATUSES] },
+              },
             });
+            if (activeDriverTrips === 0) {
+              await tx.driver.update({
+                where: { id: trip.driverId },
+                data: { status: "AVAILABLE" },
+              });
+            }
           }
         });
 

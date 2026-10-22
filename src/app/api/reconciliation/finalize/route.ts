@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorizeApi } from "@/lib/permissions";
 import { ActivityLogger } from "@/lib/logger";
+import { ACTIVE_TRIP_STATUSES } from "@/lib/constants";
 
 export async function POST(req: NextRequest) {
   try {
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
           where: {
             vehicleId: trip.vehicleId,
             id: { not: tripIdNum },
-            status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
           },
         });
 
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
           where: {
             driverId: trip.driverId,
             id: { not: tripIdNum },
-            status: { notIn: ["COMPLETED", "FINALIZED", "CLOSED", "CANCELLED"] },
+            status: { in: [...ACTIVE_TRIP_STATUSES] },
           },
         });
 
