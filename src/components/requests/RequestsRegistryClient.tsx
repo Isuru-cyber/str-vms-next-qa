@@ -39,38 +39,56 @@ export function RequestsRegistryClient({
 
   // Date Filtering Logic
   const filterByDate = (dateStr: string | Date, range: string): boolean => {
-    if (!range) return true;
+    if (!range || range === "all") return true;
     const reqDate = new Date(dateStr);
+    if (isNaN(reqDate.getTime())) return true;
     const now = new Date();
 
-    const todayStr = now.toISOString().slice(0, 10);
-    const reqDateStr = reqDate.toISOString().slice(0, 10);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    if (range === "today") {
+      return reqDate >= todayStart && reqDate <= todayEnd;
+    }
 
-    if (range === "today") return reqDateStr === todayStr;
-
-    const dayOfWeek = now.getDay() || 7;
+    const dayOfWeek = now.getDay() || 7; // Mon = 1, Sun = 7
     const thisWeekStart = new Date(now);
     thisWeekStart.setDate(now.getDate() - dayOfWeek + 1);
     thisWeekStart.setHours(0, 0, 0, 0);
 
-    if (range === "this_week") return reqDate >= thisWeekStart && reqDate <= now;
+    const thisWeekEnd = new Date(thisWeekStart);
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 7);
+    thisWeekEnd.setMilliseconds(-1);
+
+    if (range === "this_week") {
+      return reqDate >= thisWeekStart && reqDate <= thisWeekEnd;
+    }
 
     const lastWeekStart = new Date(thisWeekStart);
     lastWeekStart.setDate(lastWeekStart.getDate() - 7);
     const lastWeekEnd = new Date(thisWeekStart);
     lastWeekEnd.setMilliseconds(-1);
 
-    if (range === "last_week") return reqDate >= lastWeekStart && reqDate <= lastWeekEnd;
+    if (range === "last_week") {
+      return reqDate >= lastWeekStart && reqDate <= lastWeekEnd;
+    }
 
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (range === "this_month") return reqDate >= thisMonthStart && reqDate <= now;
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    if (range === "this_month") {
+      return reqDate >= thisMonthStart && reqDate <= thisMonthEnd;
+    }
 
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-    if (range === "last_month") return reqDate >= lastMonthStart && reqDate <= lastMonthEnd;
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    if (range === "last_month") {
+      return reqDate >= lastMonthStart && reqDate <= lastMonthEnd;
+    }
 
-    const thisYearStart = new Date(now.getFullYear(), 0, 1);
-    if (range === "this_year") return reqDate >= thisYearStart && reqDate <= now;
+    const thisYearStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const thisYearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    if (range === "this_year") {
+      return reqDate >= thisYearStart && reqDate <= thisYearEnd;
+    }
 
     return true;
   };
