@@ -386,7 +386,7 @@ export function FgAllocationHubClient({
     if (vId) {
       const veh = vehicles.find((v: any) => String(v.id) === String(vId));
       const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
-      if (linked) {
+      if (linked && linked.status === "AVAILABLE") {
         setModalDriverId(String(linked.id));
       } else {
         setModalDriverId("");
@@ -402,7 +402,7 @@ export function FgAllocationHubClient({
     if (vId) {
       const veh = vehicles.find((v: any) => String(v.id) === String(vId));
       const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
-      if (linked) {
+      if (linked && linked.status === "AVAILABLE") {
         setCombineDriverId(String(linked.id));
       } else {
         setCombineDriverId("");
@@ -1181,8 +1181,8 @@ export function FgAllocationHubClient({
                       return filteredDrivers.map((d: any) => {
                         const isBusy = d.status && d.status !== "AVAILABLE";
                         return (
-                          <option key={d.id} value={d.id}>
-                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}${isBusy ? ` — [${d.status}]` : ""}
+                          <option key={d.id} value={d.id} disabled={isBusy}>
+                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}{isBusy ? ` — [${d.status}]` : ""}
                           </option>
                         );
                       });
@@ -1494,8 +1494,8 @@ export function FgAllocationHubClient({
                       return filteredDrivers.map((d: any) => {
                         const isBusy = d.status && d.status !== "AVAILABLE";
                         return (
-                          <option key={d.id} value={d.id}>
-                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}${isBusy ? ` — [${d.status}]` : ""}
+                          <option key={d.id} value={d.id} disabled={isBusy}>
+                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}{isBusy ? ` — [${d.status}]` : ""}
                           </option>
                         );
                       });
