@@ -1763,35 +1763,15 @@ export function CombineWorkbenchClient({
               >
                 {suggestedRoutes.length > 0 ? (
                   <>
-                    <option value="">Select a Suggested Route...</option>
-                    <optgroup label="✨ Suggested Corridor Routes">
-                      {suggestedRoutes.map((r) => (
-                        <option key={`sug-${r.id}`} value={r.id}>
-                          ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km{r.is_exact ? " (Best Match)" : " (Covers All Stops)"}
-                        </option>
-                      ))}
-                    </optgroup>
-                    {routes && routes.length > 0 && (
-                      <optgroup label="All Available Routes">
-                        {routes.map((r: any) => (
-                          <option key={`all-${r.id}`} value={r.id}>
-                            {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </>
-                ) : routes && routes.length > 0 ? (
-                  <>
-                    <option value="">No exact suggestion — Choose from All Routes...</option>
-                    {routes.map((r: any) => (
-                      <option key={`fallback-${r.id}`} value={r.id}>
-                        {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
+                    <option value="">Select a Suggested Corridor Route...</option>
+                    {suggestedRoutes.map((r) => (
+                      <option key={`sug-${r.id}`} value={r.id}>
+                        ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km{r.is_exact ? " (Best Match)" : " (Covers All Stops)"}
                       </option>
                     ))}
                   </>
                 ) : (
-                  <option value="">No routes available</option>
+                  <option value="">No matching route found — Click (+) to create route</option>
                 )}
               </select>
             </div>
@@ -2772,35 +2752,15 @@ export function CombineWorkbenchClient({
                     >
                       {suggestedRoutes.length > 0 ? (
                         <>
-                          <option value="">Select a Route...</option>
-                          <optgroup label="✨ Suggested Corridor Routes">
-                            {suggestedRoutes.map((r) => (
-                              <option key={`ws-sug-${r.id}`} value={r.id}>
-                                ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km{r.is_exact ? " (Best Match)" : " (Covers All Stops)"}
-                              </option>
-                            ))}
-                          </optgroup>
-                          {routes && routes.length > 0 && (
-                            <optgroup label="All Available Routes">
-                              {routes.map((r: any) => (
-                                <option key={`ws-all-${r.id}`} value={r.id}>
-                                  {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                        </>
-                      ) : routes && routes.length > 0 ? (
-                        <>
-                          <option value="">No exact suggestion — Choose from All Routes...</option>
-                          {routes.map((r: any) => (
-                            <option key={`ws-fallback-${r.id}`} value={r.id}>
-                              {r.routeName || r.route_name} ({r.routeCode || r.route_code}) - {r.totalDistanceKm || r.total_distance_km || 0}km
+                          <option value="">Select a Suggested Corridor Route...</option>
+                          {suggestedRoutes.map((r) => (
+                            <option key={`ws-sug-${r.id}`} value={r.id}>
+                              ⭐ {r.route_name || r.routeName} ({r.route_code || r.routeCode}) - {r.total_distance || r.total_distance_km}km{r.is_exact ? " (Best Match)" : " (Covers All Stops)"}
                             </option>
                           ))}
                         </>
                       ) : (
-                        <option value="">No matching route found</option>
+                        <option value="">No matching route found — Click (+) to create route</option>
                       )}
                     </select>
                   </div>

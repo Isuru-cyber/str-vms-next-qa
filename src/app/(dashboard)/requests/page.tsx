@@ -1,14 +1,21 @@
 import React from "react";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isAdmin, can } from "@/lib/permission-utils";
 import { RequestsRegistryClient } from "@/components/requests/RequestsRegistryClient";
 
 export default async function RequestsPage() {
   const user = await getSession();
 
+  const isManagement = isAdmin(user) || can(user, "allocate_trips") || can(user, "dispatch_trips");
+
   const whereClause: any = {};
-  if (user && user.roleCode === "ENTRY_USER") {
-    whereClause.plantId = { in: user.plantIds && user.plantIds.length > 0 ? user.plantIds : [-1] };
+  if (!isManagement) {
+    // User-level requesters only see their own requests!
+    whereClause.requesterId = user ? user.id : -1;
+  } else if (!isAdmin(user) && user?.plantIds?.length) {
+    // Non-admin management users (e.g. plant dispatchers) see requests for their assigned plants
+    whereClause.plantId = { in: user.plantIds };
   }
 
   const [requests, plants, operations] = await Promise.all([

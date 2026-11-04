@@ -84,6 +84,8 @@ export default async function FgAllocationPage() {
                 OR: [
                   { linkedPlantId: { in: user.plantIds } },
                   { driverType: "ADHOC" },
+                  { linkedPlantId: null },
+                  { linkedVehicle: { defaultLocation: { plantId: { in: user.plantIds } } } },
                 ],
               }
             : { id: -1 }

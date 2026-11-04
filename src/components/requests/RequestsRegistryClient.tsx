@@ -318,6 +318,11 @@ export function RequestsRegistryClient({
         {/* Right Actions */}
         <div className="flex items-center gap-1.5 shrink-0 justify-end w-full sm:w-auto pt-1 sm:pt-0">
           <span className="h-8 inline-flex items-center text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 rounded-lg border border-slate-200 whitespace-nowrap">
+            {currentUser && (currentUser.roleCode === "SUPER_ADMIN" || currentUser.roleCode === "ADMIN" || currentUser.permissions?.includes("allocate_trips") || currentUser.permissions?.includes("dispatch_trips")) ? (
+              <span className="text-slate-500 mr-1 hidden sm:inline">[All Management]</span>
+            ) : (
+              <span className="text-indigo-600 mr-1 hidden sm:inline font-bold">[My Requests]</span>
+            )}
             <span className="hidden xs:inline">Total:&nbsp;</span>{filteredRequests.length}<span className="hidden xs:inline">&nbsp;Requests</span><span className="xs:hidden">&nbsp;Reqs</span>
           </span>
 

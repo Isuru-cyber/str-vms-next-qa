@@ -267,7 +267,11 @@ export function CombineTripsRegistryClient({
       const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
       if (linked) {
         setModalDriverId(String(linked.id));
+      } else {
+        setModalDriverId("");
       }
+    } else {
+      setModalDriverId("");
     }
   };
 
@@ -737,14 +741,21 @@ export function CombineTripsRegistryClient({
                     className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="">-- Select Driver --</option>
-                    {(createFleetMode === "ADHOC"
-                      ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
-                      : drivers.filter((d: any) => d.driverType !== "ADHOC")
-                    ).map((d: any) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}
-                      </option>
-                    ))}
+                    {(() => {
+                      const veh = vehicles.find((v: any) => String(v.id) === String(modalVehicleId));
+                      const linkedDriverId = veh?.drivers?.[0]?.id || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(modalVehicleId))?.id;
+                      const filteredDrivers = createFleetMode === "ADHOC"
+                        ? drivers.filter((d: any) => d.driverType === "ADHOC" || d.id === linkedDriverId || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
+                        : drivers.filter((d: any) => d.driverType !== "ADHOC" || d.id === linkedDriverId);
+                      return filteredDrivers.map((d: any) => {
+                        const isBusy = d.status && d.status !== "AVAILABLE";
+                        return (
+                          <option key={d.id} value={d.id}>
+                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}${isBusy ? ` — [${d.status}]` : ""}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
               </div>

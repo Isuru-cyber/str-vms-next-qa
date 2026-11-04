@@ -388,7 +388,11 @@ export function FgAllocationHubClient({
       const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
       if (linked) {
         setModalDriverId(String(linked.id));
+      } else {
+        setModalDriverId("");
       }
+    } else {
+      setModalDriverId("");
     }
   };
 
@@ -400,7 +404,11 @@ export function FgAllocationHubClient({
       const linked = (veh?.drivers && veh.drivers[0]) || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(vId));
       if (linked) {
         setCombineDriverId(String(linked.id));
+      } else {
+        setCombineDriverId("");
       }
+    } else {
+      setCombineDriverId("");
     }
   };
 
@@ -1136,7 +1144,7 @@ export function FgAllocationHubClient({
                     ).map((v: any) => {
                       const isBusy = v.status && v.status !== "AVAILABLE";
                       return (
-                        <option key={v.id} value={v.id} disabled={isBusy}>
+                        <option key={v.id} value={v.id}>
                           {singleFleetMode === "ADHOC"
                             ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
                             : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
@@ -1164,17 +1172,21 @@ export function FgAllocationHubClient({
                     className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                   >
                     <option value="">-- Select Driver --</option>
-                    {(singleFleetMode === "ADHOC"
-                      ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
-                      : drivers.filter((d: any) => d.driverType !== "ADHOC")
-                    ).map((d: any) => {
-                      const isBusy = d.status && d.status !== "AVAILABLE";
-                      return (
-                        <option key={d.id} value={d.id} disabled={isBusy}>
-                          {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}{isBusy ? ` — [${d.status}]` : ""}
-                        </option>
-                      );
-                    })}
+                    {(() => {
+                      const veh = vehicles.find((v: any) => String(v.id) === String(modalVehicleId));
+                      const linkedDriverId = veh?.drivers?.[0]?.id || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(modalVehicleId))?.id;
+                      const filteredDrivers = singleFleetMode === "ADHOC"
+                        ? drivers.filter((d: any) => d.driverType === "ADHOC" || d.id === linkedDriverId || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(modalVehicleId)))
+                        : drivers.filter((d: any) => d.driverType !== "ADHOC" || d.id === linkedDriverId);
+                      return filteredDrivers.map((d: any) => {
+                        const isBusy = d.status && d.status !== "AVAILABLE";
+                        return (
+                          <option key={d.id} value={d.id}>
+                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}${isBusy ? ` — [${d.status}]` : ""}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
               </div>
@@ -1445,7 +1457,7 @@ export function FgAllocationHubClient({
                     ).map((v: any) => {
                       const isBusy = v.status && v.status !== "AVAILABLE";
                       return (
-                        <option key={v.id} value={v.id} disabled={isBusy}>
+                        <option key={v.id} value={v.id}>
                           {combineFleetMode === "ADHOC"
                             ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
                             : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
@@ -1473,17 +1485,21 @@ export function FgAllocationHubClient({
                     className="w-full text-xs font-semibold bg-white border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs text-slate-800"
                   >
                     <option value="">-- Select Driver --</option>
-                    {(combineFleetMode === "ADHOC"
-                      ? drivers.filter((d: any) => d.driverType === "ADHOC" || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(combineVehicleId)))
-                      : drivers.filter((d: any) => d.driverType !== "ADHOC")
-                    ).map((d: any) => {
-                      const isBusy = d.status && d.status !== "AVAILABLE";
-                      return (
-                        <option key={d.id} value={d.id} disabled={isBusy}>
-                          {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}{isBusy ? ` — [${d.status}]` : ""}
-                        </option>
-                      );
-                    })}
+                    {(() => {
+                      const veh = vehicles.find((v: any) => String(v.id) === String(combineVehicleId));
+                      const linkedDriverId = veh?.drivers?.[0]?.id || drivers.find((d: any) => Number(d.linkedVehicleId) === Number(combineVehicleId))?.id;
+                      const filteredDrivers = combineFleetMode === "ADHOC"
+                        ? drivers.filter((d: any) => d.driverType === "ADHOC" || d.id === linkedDriverId || (d.linkedVehicleId && Number(d.linkedVehicleId) === Number(combineVehicleId)))
+                        : drivers.filter((d: any) => d.driverType !== "ADHOC" || d.id === linkedDriverId);
+                      return filteredDrivers.map((d: any) => {
+                        const isBusy = d.status && d.status !== "AVAILABLE";
+                        return (
+                          <option key={d.id} value={d.id}>
+                            {d.name} {d.nic ? `(NIC: ${d.nic})` : ""} - {d.mobile || "N/A"}${isBusy ? ` — [${d.status}]` : ""}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
               </div>
