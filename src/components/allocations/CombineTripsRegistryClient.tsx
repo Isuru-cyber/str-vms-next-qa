@@ -713,13 +713,16 @@ export function CombineTripsRegistryClient({
                     {(createFleetMode === "ADHOC"
                       ? vehicles.filter((v: any) => v.ownershipType === "ADHOC")
                       : vehicles.filter((v: any) => v.ownershipType !== "ADHOC")
-                    ).map((v: any) => (
-                      <option key={v.id} value={v.id}>
-                        {createFleetMode === "ADHOC"
-                          ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})`
-                          : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})`}
-                      </option>
-                    ))}
+                    ).map((v: any) => {
+                      const isBusy = v.status && v.status !== "AVAILABLE";
+                      return (
+                        <option key={v.id} value={v.id} disabled={isBusy}>
+                          {createFleetMode === "ADHOC"
+                            ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
+                            : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 

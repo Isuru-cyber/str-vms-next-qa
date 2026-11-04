@@ -1144,7 +1144,7 @@ export function FgAllocationHubClient({
                     ).map((v: any) => {
                       const isBusy = v.status && v.status !== "AVAILABLE";
                       return (
-                        <option key={v.id} value={v.id}>
+                        <option key={v.id} value={v.id} disabled={isBusy}>
                           {singleFleetMode === "ADHOC"
                             ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
                             : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
@@ -1457,7 +1457,7 @@ export function FgAllocationHubClient({
                     ).map((v: any) => {
                       const isBusy = v.status && v.status !== "AVAILABLE";
                       return (
-                        <option key={v.id} value={v.id}>
+                        <option key={v.id} value={v.id} disabled={isBusy}>
                           {combineFleetMode === "ADHOC"
                             ? `[${v.vehicleCategory || "Lorry"}] ${v.vehicleNumber} (${v.transporterName || "Outside Supplier"})${isBusy ? ` — [${v.status}]` : ""}`
                             : `${v.vehicleNumber} (${v.vehicleCategory || v.vehicleType})${isBusy ? ` — [${v.status}]` : ""}`}
