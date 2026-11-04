@@ -24,6 +24,20 @@ export async function POST(request: NextRequest) {
 
     const cleanNic = String(nic).trim().toUpperCase();
     const cleanMobile = String(mobile).trim().replace(/[\s\-]/g, "");
+
+    if (cleanNic.length > 20) {
+      return NextResponse.json(
+        { message: "NIC number cannot exceed 20 characters." },
+        { status: 400 }
+      );
+    }
+    if (cleanMobile.length > 20) {
+      return NextResponse.json(
+        { message: "Mobile number cannot exceed 20 characters." },
+        { status: 400 }
+      );
+    }
+
     if (licenseNumber && !isValidLicenseNumber(String(licenseNumber))) {
       return NextResponse.json(
         { message: "Invalid license number format. Must be 5 to 30 alphanumeric characters." },
@@ -79,7 +93,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: String(name).trim(),
         nic: cleanNic,
-        mobile: String(mobile).trim(),
+        mobile: cleanMobile,
         licenseNumber: licenseNumber ? String(licenseNumber).trim() : "",
         licenseExpiry: parsedExpiry,
         linkedVehicleId: vehId,
@@ -174,6 +188,12 @@ export async function PUT(request: NextRequest) {
     let cleanNic: string | undefined = undefined;
     if (nic !== undefined) {
       cleanNic = String(nic).trim().toUpperCase();
+      if (cleanNic.length > 20) {
+        return NextResponse.json(
+          { message: "NIC number cannot exceed 20 characters." },
+          { status: 400 }
+        );
+      }
       if (cleanNic !== existingDriver.nic) {
         const dup = await prisma.driver.findUnique({ where: { nic: cleanNic } });
         if (dup) {
@@ -185,6 +205,12 @@ export async function PUT(request: NextRequest) {
     let cleanMobile: string | undefined = undefined;
     if (mobile !== undefined) {
       cleanMobile = String(mobile).trim().replace(/[\s\-]/g, "");
+      if (cleanMobile.length > 20) {
+        return NextResponse.json(
+          { message: "Mobile number cannot exceed 20 characters." },
+          { status: 400 }
+        );
+      }
     }
 
     let cleanLicense: string | undefined = undefined;
